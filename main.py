@@ -159,7 +159,7 @@ class Score:
         score = data[0]
         if self.matches_score(score):
             self.submission = score
-            print(color("Submission found!", color='green'))
+            print(color("Submission found!", fg='green'))
 
     def get_status(self):
         self.ranked = False
@@ -167,7 +167,7 @@ class Score:
         self.submitted = True
 
         if self.submission is not None:
-            beatmap = submission['beatmap']
+            beatmap = self.submission['beatmap']
         else:
             endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}'
             response = requests.get(endpoint, headers=headers)
@@ -201,7 +201,7 @@ class Score:
 
         if self.submission is not None and \
            self.ranked and self.submitted:
-            self.pp = submission['pp']
+            self.pp = self.submission['pp']
         else:
             self.pp = ezpp_pp(ez)
 
