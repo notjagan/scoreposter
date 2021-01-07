@@ -271,11 +271,11 @@ class Score:
         if options.show_pp:
             pp_text = f"{self.pp:.0f}pp"
             if not self.ranked:
-                pptext += " if ranked"
+                pp_text += " if ranked"
             elif not self.submitted:
-                pptext += " if submitted"
+                pp_text += " if submitted"
             if not fc:
-                pptext += f" ({self.fcpp:.0f}pp for FC)"
+                pp_text += f" ({self.fcpp:.0f}pp for FC)"
             segments.append(pp_text)
 
         if options.show_ur:
