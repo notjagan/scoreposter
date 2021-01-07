@@ -29,15 +29,18 @@ convert_path = lambda path: \
             else path
 
 OSU_PATH = convert_path(r'C:\Users\notja\AppData\Local\osu!')
-OSU_URL = 'http://osu.ppy.sh'
+OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
+REDDIT_URL = 'https://www.reddit.com/api'
 
 with open('api.json') as file:
     data = json.load(file)
-    API_KEY = data['key']
-    CLIENT_ID = data['id']
-    CLIENT_SECRET = data['secret']
+    OSU_API_KEY = data['osu_key']
+    OSU_CLIENT_ID = data['osu_id']
+    OSU_CLIENT_SECRET = data['osu_secret']
+    REDDIT_CLIENT_ID = data['reddit_id']
+    REDDIT_CLIENT_SECRET = data['reddit_secret']
 
 with open(os.path.join(OSU_PATH, 'osu!.notja.cfg')) as file:
     content = '[header]\n' + file.read()
@@ -115,7 +118,7 @@ class Score:
     def get_id(self):
         endpoint = f'{V1_URL}/get_user'
         parameters = {
-            'k':        API_KEY,
+            'k':        OSU_API_KEY,
             'u':        self.player,
             'type':     'string'
         }
@@ -156,7 +159,7 @@ class Score:
         endpoint = f'{V2_URL}/users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
         response = requests.get(endpoint, params=parameters,
-                                headers=headers)
+                                headers=osu_headers)
         data = json.loads(response.text)
         if 'error' in data or len(data) != 1:
             return
@@ -175,7 +178,7 @@ class Score:
             beatmap = self.submission['beatmap']
         else:
             endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}'
-            response = requests.get(endpoint, headers=headers)
+            response = requests.get(endpoint, headers=osu_headers)
             beatmap = json.loads(response.text)
 
         status = beatmap['status']
@@ -241,7 +244,7 @@ class Score:
         self.ranking = None
         if self.ranked or self.loved:
             endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}/scores'
-            response = requests.get(endpoint, headers=headers)
+            response = requests.get(endpoint, headers=osu_headers)
             data = json.loads(response.text)
             if 'error' in data:
                 return
@@ -300,19 +303,42 @@ class Score:
         return title
 
 
-def get_oauth_headers():
+def get_osu_headers():
+    endpoint = f'{OSU_URL}/oauth/token'
     payload = {
-        'client_id':        CLIENT_ID,
-        'client_secret':    CLIENT_SECRET,
+        'client_id':        OSU_CLIENT_ID,
+        'client_secret':    OSU_CLIENT_SECRET,
         'grant_type':       'client_credentials',
         'scope':            'public'
     }
-    response = requests.post(f'{OSU_URL}/oauth/token', data=payload)
+    response = requests.post(endpoint, data=payload)
     data = json.loads(response.text)
     token_type = data['token_type']
     access_token = data['access_token']
 
     headers = {'Authorization': f'{token_type} {access_token}'}
+    return headers
+
+
+def get_reddit_headers():
+    auth_str = requests.auth._basic_auth_str(REDDIT_CLIENT_ID,
+                                             REDDIT_CLIENT_SECRET)
+    agent = 'windows:scoreposter:v1.1.0 (by /u/notjagan)'
+    endpoint = f'{REDDIT_URL}/v1/access_token'
+    headers = {
+        'User-Agent':       agent,
+        'Authorization':    auth_str
+    }
+    payload = {
+        'grant_type':       'client_credentials',
+        'scope':            'submit'
+    }
+    response = requests.post(endpoint, data=payload, headers=headers)
+    data = json.loads(response.text)
+    token_type = data['token_type'].title()
+    access_token = data['access_token']
+    
+    headers['Authorization'] = f'{token_type} {access_token}'
     return headers
 
 
@@ -358,8 +384,9 @@ def main():
     replay = parse_replay_file(replay_path)
     screenshot = cv2.imread(sc_path, cv2.IMREAD_COLOR)
 
-    global headers
-    headers = get_oauth_headers()
+    global osu_headers, reddit_headers
+    osu_headers = get_osu_headers()
+    reddit_headers = get_reddit_headers()
     score = Score(replay, screenshot)
     title = score.construct_title(options)
     print(title)
