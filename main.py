@@ -316,6 +316,28 @@ def get_oauth_headers():
     return headers
 
 
+def post_score(title):
+    screenshot_url = None
+    if not ON_WSL:
+        from pywinauto import Application
+        app = Application(backend='uia')
+        try:
+            app.connect(title_re=r'[0-9a-f]{4} \(1920.1080\)')
+            dlg = app.top_window()
+            element = "Address and search bar"
+            child = dlg.child_window(title=element, control_type="Edit")
+            screenshot_url = child.get_value()
+            if not screenshot_url.startswith('osu'):
+                screenshot_url = None
+        except:
+            pass
+
+    if screenshot_url == None:
+        screenshot_url = input("Enter screenshot URL: ")
+    else:
+        print(color(f"Found screenshot: {screenshot_url}", fg='green'))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
@@ -341,7 +363,11 @@ def main():
     score = Score(replay, screenshot)
     title = score.construct_title(options)
     print(title)
-    pyperclip.copy(title)
+
+    if input('Post score? ').casefold() == 'y'.casefold():
+        post_score(title)
+    else:
+        pyperclip.copy(title)
 
 
 if __name__ == '__main__':
