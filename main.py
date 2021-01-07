@@ -336,6 +336,7 @@ def main():
     score = Score(replay, screenshot)
     title = score.construct_title(options)
     print(title)
+    pyperclip.copy(title)
 
 
 if __name__ == '__main__':
