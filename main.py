@@ -174,7 +174,7 @@ class Score:
             beatmap = json.loads(response.text)
 
         status = beatmap['status']
-        if status == 'ranked':
+        if status == 'ranked' or status == 'approved':
             self.ranked = True
             if self.submission is not None and \
                self.submission['pp'] is None:
