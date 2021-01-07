@@ -58,6 +58,12 @@ db = sqlite3.connect('cache.db')
 class TitleOptions:
 
     def __init__(self, args=None, options=None):
+        self.sliderbreaks = 0
+        self.show_pp = True
+        self.show_combo = True
+        self.show_ur = True
+        self.message = None
+        
         if args is not None:
             self.sliderbreaks = args.sliderbreaks
             self.show_pp = args.show_pp
@@ -67,12 +73,6 @@ class TitleOptions:
         elif options is not None:
             for key, value in options.items():
                 setattr(self, key, value)
-        else:
-            self.sliderbreaks = 0
-            self.show_pp = True
-            self.show_combo = True
-            self.show_ur = True
-            self.message = None
 
 
 class Score:
