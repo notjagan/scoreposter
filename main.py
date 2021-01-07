@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import glob
+import platform
 import argparse
 import configparser
 from functools import reduce
@@ -22,7 +23,12 @@ from osrparse.enums import Mod
 from osrparse import parse_replay_file
 from pytesseract import pytesseract as pt
 
-OSU_PATH = r'/mnt/c/Users/notja/AppData/Local/osu!'
+ON_WSL = "microsoft".casefold() in platform.uname().release.casefold()
+convert_path = lambda path: \
+        check_output(['wslpath', path]).decode().strip() if ON_WSL \
+            else path
+
+OSU_PATH = convert_path(r'C:\Users\notja\AppData\Local\osu!')
 OSU_URL = 'http://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
@@ -33,13 +39,12 @@ with open('api.json') as file:
     CLIENT_ID = data['id']
     CLIENT_SECRET = data['secret']
 
-with open(f'{OSU_PATH}/osu!.notja.cfg') as file:
+with open(os.path.join(OSU_PATH, 'osu!.notja.cfg')) as file:
     content = '[header]\n' + file.read()
 
 config = configparser.RawConfigParser()
 config.read_string(content)
-windows_dir = config['header']['BeatmapDirectory']
-BEATMAPS_DIR = check_output(['wslpath', windows_dir]).decode().strip()
+BEATMAPS_DIR = convert_path(config['header']['BeatmapDirectory'])
 
 MODS = OrderedDict([(Mod.Easy,          "EZ"),
                     (Mod.NoFail,        "NF"),
@@ -324,8 +329,8 @@ def main():
     args = parser.parse_args()
     options = TitleOptions(args=args)
 
-    replays = glob.glob(f'{OSU_PATH}/Replays/*')
-    scs = glob.glob(f'{OSU_PATH}/Screenshots/*')
+    replays = glob.glob(os.path.join(OSU_PATH, 'Replays', '*'))
+    scs = glob.glob(os.path.join(OSU_PATH, 'Screenshots', '*'))
     replay_path = max(replays, key=os.path.getctime)
     sc_path = max(scs, key=os.path.getctime)
     replay = parse_replay_file(replay_path)
