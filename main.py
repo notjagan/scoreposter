@@ -55,6 +55,26 @@ MODS = OrderedDict([(Mod.Easy,          "EZ"),
 db = sqlite3.connect('cache.db')
 
 
+class TitleOptions:
+
+    def __init__(self, args=None, options=None):
+        if args is not None:
+            self.sliderbreaks = args.sliderbreaks
+            self.show_pp = args.show_pp
+            self.show_combo = args.show_combo
+            self.show_ur = args.show_ur
+            self.message = args.message
+        elif options is not None:
+            for key, value in options.items():
+                setattr(self, key, value)
+        else:
+            self.sliderbreaks = 0
+            self.show_pp = True
+            self.show_combo = True
+            self.show_ur = True
+            self.message = None
+
+
 class Score:
 
     def __init__(self, replay, screenshot):
