@@ -247,6 +247,53 @@ class Score:
                     self.ranking = rank
                     break
 
+    def construct_title(self, options):
+        modstring = "".join(string for mod, string in MODS.items()
+                            if mod in self.mods)
+        fc = self.misses == 0 and options.sliderbreaks == 0
+
+        base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*) {self.accuracy:.2f}%"
+        if self.misses != 0:
+            base += f" {self.misses}xMiss"
+        if options.sliderbreaks != 0:
+            base += f" {options.sliderbreaks}xSB"
+        if options.show_combo:
+            base += f" {self.combo}/{self.max_combo}x"
+        if fc:
+            base += " FC"
+        if self.ranking is not None:
+            base += f" #{self.ranking}"
+        if self.loved:
+            base += " LOVED"
+
+        segments = [self.player, base]
+
+        if options.show_pp:
+            pp_text = f"{self.pp:.0f}pp"
+            if not self.ranked:
+                pptext += " if ranked"
+            elif not self.submitted:
+                pptext += " if submitted"
+            if not fc:
+                pptext += f" ({self.fcpp:.0f}pp for FC)"
+            segments.append(pp_text)
+
+        if options.show_ur:
+            dt = Mod.DoubleTime in self.mods or \
+                 Mod.Nightcore in self.mods
+            if dt:
+                ur = self.raw_ur * 2/3
+                segments.append(f"{ur:.2f} cv.UR")
+            else:
+                ur = self.raw_ur
+                segments.append(f"{ur:.2f} UR")
+
+        if options.message is not None:
+            segments.append(options.message)
+
+        title = ' | '.join(segments)
+        return title
+
 
 def get_oauth_headers():
     payload = {
@@ -288,6 +335,7 @@ def main():
     headers = get_oauth_headers()
     score = Score(replay, screenshot)
     title = score.construct_title(options)
+    print(title)
 
 
 if __name__ == '__main__':
