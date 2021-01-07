@@ -57,13 +57,13 @@ db = sqlite3.connect('cache.db')
 
 class TitleOptions:
 
-    def __init__(self, args=None, options=None):
+    def __init__(self, *, args=None, options=None):
         self.sliderbreaks = 0
         self.show_pp = True
         self.show_combo = True
         self.show_ur = True
         self.message = None
-        
+
         if args is not None:
             self.sliderbreaks = args.sliderbreaks
             self.show_pp = args.show_pp
@@ -265,6 +265,18 @@ def get_oauth_headers():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
+    parser.add_argument('-p', '--no-pp', dest='show_pp',
+                        action='store_false')
+    parser.add_argument('-c', '--no-combo', dest='show_combo',
+                        action='store_false')
+    parser.add_argument('-u', '--no-ur', dest='show_ur',
+                        action='store_false')
+    parser.add_argument('-m', '--message', type=str)
+    args = parser.parse_args()
+    options = TitleOptions(args=args)
+
     replays = glob.glob(f'{OSU_PATH}/Replays/*')
     scs = glob.glob(f'{OSU_PATH}/Screenshots/*')
     replay_path = max(replays, key=os.path.getctime)
@@ -275,6 +287,7 @@ def main():
     global headers
     headers = get_oauth_headers()
     score = Score(replay, screenshot)
+    title = score.construct_title(options)
 
 
 if __name__ == '__main__':
