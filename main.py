@@ -17,13 +17,15 @@ import pyperclip
 import numpy as np
 from oppai import *
 from PIL import Image
+from colors import color
 from osrparse.enums import Mod
 from osrparse import parse_replay_file
 from pytesseract import pytesseract as pt
 
-OSU_PATH = r'/mnt/c/Users/notja/AppData/Local/osu!/'
-V1_URL = 'http://osu.ppy.sh/api/'
-V2_URL = V1_URL + 'v2/'
+OSU_PATH = r'/mnt/c/Users/notja/AppData/Local/osu!'
+OSU_URL = 'http://osu.ppy.sh'
+V1_URL = f'{OSU_URL}/api'
+V2_URL = f'{V1_URL}/v2'
 
 with open('api.json') as file:
     data = json.load(file)
@@ -31,7 +33,7 @@ with open('api.json') as file:
     CLIENT_ID = data['id']
     CLIENT_SECRET = data['secret']
 
-with open(OSU_PATH + 'osu!.notja.cfg') as file:
+with open(f'{OSU_PATH}/osu!.notja.cfg') as file:
     content = '[header]\n' + file.read()
 
 config = configparser.RawConfigParser()
@@ -39,154 +41,223 @@ config.read_string(content)
 windows_dir = config['header']['BeatmapDirectory']
 BEATMAPS_DIR = check_output(['wslpath', windows_dir]).decode().strip()
 
-MODS = OrderedDict(zip([Mod.Easy, Mod.NoFail, Mod.Hidden, Mod.HalfTime, Mod.DoubleTime, Mod.Nightcore, Mod.HardRock, Mod.SuddenDeath, Mod.Perfect, Mod.Flashlight],
-                       ["EZ", "NF", "HD", "HT", "DT", "NC", "HR", "SD", "PF", "FL"]))
+MODS = OrderedDict([(Mod.Easy,          "EZ"),
+                    (Mod.NoFail,        "NF"),
+                    (Mod.Hidden,        "HD"),
+                    (Mod.HalfTime,      "HT"),
+                    (Mod.DoubleTime,    "DT"),
+                    (Mod.Nightcore,     "NC"),
+                    (Mod.HardRock,      "HR"),
+                    (Mod.SuddenDeath,   "SD"),
+                    (Mod.Perfect,       "PF"),
+                    (Mod.Flashlight,    "FL")])
+
+db = sqlite3.connect('cache.db')
 
 
-def refresh_db(db_path=OSU_PATH + 'osu!.db'):
-    from osu_db_tools.osu_to_sqlite import create_db
-    create_db(OSU_PATH + 'osu!.db')
+class Score:
 
+    def __init__(self, replay, screenshot):
+        self.replay = replay
+        self.screenshot = screenshot
 
-def find_ur(screenshot):
-    grayscale = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
-    region = grayscale[864:864 + 144, 363:363 + 663]
-    laplacian = cv2.Laplacian(region, cv2.CV_64F)
-    ret, thresh = cv2.threshold(laplacian, 100, 255, cv2.THRESH_BINARY)
-    dilation = cv2.dilate(thresh, np.ones((3, 3), np.uint8))
-    opening = cv2.morphologyEx(dilation, cv2.MORPH_OPEN,
-                               np.ones((5, 5), np.uint8))
-    mask = region > 220
-    y, x = np.min(np.where(opening * mask), axis=1)
-    crop = region[y + 38:y + 55, x + 115:x + 174]
+        self.process_replay()
+        self.process_beatmap()
+        self.get_id()
+        self.get_mods()
+        self.calculate_accuracy()
+        self.find_submission()
+        self.get_status()
+        self.calculate_statistics()
+        self.find_ur()
+        self.get_ranking()
 
-    resized = cv2.resize(crop, (0, 0), fx=4, fy=4)
-    image = Image.fromarray(resized)
-    text = pt.image_to_string(image, config="-c tessedit_char_whitelist=1234567890.")
-    ur = float(text.strip())
+    def process_replay(self):
+        self.player = self.replay.player_name
+        self.combo = self.replay.max_combo
+        self.misses = self.replay.misses
 
-    return ur
+    def process_beatmap(self):
+        cur = db.cursor()
+        cur.execute('SELECT beatmap_id, folder_name, map_file, artist, title, difficulty FROM maps WHERE md5_hash=?',
+                    (self.replay.beatmap_hash,))
+        self.beatmap_id, folder_name, map_file, self.artist, \
+            self.title, self.difficulty = cur.fetchone()
+        self.map_path = os.path.join(BEATMAPS_DIR, folder_name,
+                                     map_file)
+        cur.close()
 
+    def get_id(self):
+        endpoint = f'{V1_URL}/get_user'
+        parameters = {
+            'k':        API_KEY,
+            'u':        self.player,
+            'type':     'string'
+        }
 
-def construct_post_title(replay, screenshot, db, options):
-    cur = db.cursor()
-    cur.execute("SELECT beatmap_id, folder_name, map_file, artist, title, difficulty FROM maps WHERE md5_hash=?",
-                (replay.beatmap_hash,))
-    beatmap_id, folder_name, map_file, artist, title, difficulty = cur.fetchone()
-    map_path = os.path.join(BEATMAPS_DIR, folder_name, map_file)
-    cur.close()
+        response = requests.get(endpoint, params=parameters)
+        data = json.loads(response.text)[0]
+        self.user_id = int(data['user_id'])
 
-    player = replay.player_name
-    accuracy = np.average([1, 1/3, 1/6, 0],
-                          weights=[replay.number_300s,
-                                   replay.number_100s,
-                                   replay.number_50s,
-                                   replay.misses]
-                          ) * 100
-    combo = replay.max_combo
-    misses = replay.misses
+    def get_mods(self):
+        self.mods = set(self.replay.mod_combination)
+        if Mod.Nightcore in self.mods:
+            self.mods.discard(Mod.DoubleTime)
+        if Mod.Perfect in self.mods:
+            self.mods.discard(Mod.SuddenDeath)
 
-    mods = set(replay.mod_combination)
-    if Mod.Nightcore in mods:
-        mods.discard(Mod.DoubleTime)
-    if Mod.Perfect in mods:
-        mods.discard(Mod.SuddenDeath)
-    modstring = "".join(string for mod, string in MODS.items()
-                               if mod in mods)
+    def calculate_accuracy(self):
+        weights = [300/300, 100/300, 50/300, 0/300]
+        hits = [self.replay.number_300s,
+                self.replay.number_100s,
+                self.replay.number_50s,
+                self.replay.misses]
+        self.accuracy = np.average(weights, weights=hits) * 100
 
-    ez = ezpp_new()
-    ezpp_set_autocalc(ez, 1)
-    with open(map_path) as file:
-        data = file.read()
-        ezpp_data_dup(ez, data, len(data.encode('utf-8')))
-    ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
-                             mods, 0))
+    def matches_score(self, score):
+        stats = score['statistics']
+        beatmap = score['beatmap']
+        return beatmap['id'] == self.beatmap_id and                 \
+            score['user_id'] == self.user_id and                    \
+            stats['count_300'] == self.replay.number_300s and       \
+            stats['count_100'] == self.replay.number_100s and       \
+            stats['count_50'] == self.replay.number_50s and         \
+            stats['count_miss'] == self.misses and                  \
+            score['max_combo'] == self.combo and                    \
+            set(score['mods']) == {MODS[mod] for mod in self.mods}
 
-    stars = ezpp_stars(ez)
-    max_combo = ezpp_max_combo(ez)
+    def find_submission(self):
+        self.submission = None
+        endpoint = f'{V2_URL}/users/{self.user_id}/scores/recent'
+        parameters = {'limit': 1}
+        response = requests.get(endpoint, params=parameters,
+                                headers=headers)
+        data = json.loads(response.text)
+        if 'error' in data or len(data) != 1:
+            return
 
-    ezpp_set_combo(ez, combo)
-    ezpp_set_nmiss(ez, misses)
-    ezpp_set_accuracy_percent(ez, accuracy)
-    pp = ezpp_pp(ez)
+        score = data[0]
+        if self.matches_score(score):
+            self.submission = score
+            print(color("Submission found!", color='green'))
 
-    ezpp_set_combo(ez, max_combo)
-    ezpp_set_nmiss(ez, 0)
-    fcpp = ezpp_pp(ez)
+    def get_status(self):
+        self.ranked = False
+        self.loved = False
+        self.submitted = True
 
-    ezpp_free(ez)
-
-    misstext = ""
-    if misses != 0:
-        misstext += f" {misses}xMiss"
-    if options.sbcount != 0:
-        misstext += f" {options.sbcount}xSB"
-
-    fc = not (misses or options.sbcount)
-    combotext = ""
-    if options.combo:
-        combotext = f" {combo}/{max_combo}x"
-    if fc:
-        combotext += " FC"
-    if options.loved:
-        ranked = False
-        combotext += " LOVED"
-
-    play = f"{artist} - {title} [{difficulty}] +{modstring} ({stars:.2f}*) {accuracy:.2f}%{misstext}{combotext}"
-    segments = [player, play]
-
-    if options.pp:
-        pptext = f"{pp:.0f}pp"
-        if not options.ranked:
-            pptext += " if ranked"
-        if not fc:
-            pptext += f" ({fcpp:.0f}pp for FC)"
-        segments.append(pptext)
-
-    if options.ur:
-        ur = find_ur(screenshot)
-        dt = Mod.DoubleTime in mods or Mod.Nightcore in mods
-        if dt:
-            ur *= 2/3
-            segments.append(f"{ur:.2f} cv.UR")
+        if self.submission is not None:
+            beatmap = submission['beatmap']
         else:
-            segments.append(f"{ur:.2f} UR")
+            endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}'
+            response = requests.get(endpoint, headers=headers)
+            beatmap = json.loads(response.text)
 
-    if options.message is not None:
-        segments.append(options.message)
+        status = beatmap['status']
+        if status == 'ranked':
+            self.ranked = True
+            if self.submission is not None and \
+               self.submission['pp'] is None:
+                self.submitted = False
+        elif status == 'loved':
+            self.loved = True
 
-    title = " | ".join(segments)
-    return title
+    def calculate_statistics(self):
+        ez = ezpp_new()
+        ezpp_set_autocalc(ez, 1)
+
+        with open(self.map_path) as file:
+            data = file.read()
+            ezpp_data_dup(ez, data, len(data.encode('utf-8')))
+        ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
+                                 self.mods, 0))
+
+        self.stars = ezpp_stars(ez)
+        self.max_combo = ezpp_max_combo(ez)
+
+        ezpp_set_combo(ez, self.combo)
+        ezpp_set_nmiss(ez, self.misses)
+        ezpp_set_accuracy_percent(ez, self.accuracy)
+
+        if self.submission is not None and \
+           self.ranked and self.submitted:
+            self.pp = submission['pp']
+        else:
+            self.pp = ezpp_pp(ez)
+
+        ezpp_set_combo(ez, self.max_combo)
+        ezpp_set_nmiss(ez, 0)
+        self.fcpp = ezpp_pp(ez)
+
+    def find_ur(self):
+        grayscale = cv2.cvtColor(self.screenshot, cv2.COLOR_BGR2GRAY)
+        region = grayscale[864:864+144, 363:363+663]
+        laplacian = cv2.Laplacian(region, cv2.CV_64F)
+        ret, thresh = cv2.threshold(laplacian, 100, 255,
+                                    cv2.THRESH_BINARY)
+        dilation = cv2.dilate(thresh, np.ones((3, 3), np.uint8))
+        opening = cv2.morphologyEx(dilation, cv2.MORPH_OPEN,
+                                   np.ones((5, 5), np.uint8))
+        mask = region > 220
+        y, x = np.min(np.where(opening * mask), axis=1)
+        crop = region[y+38:y+55, x+115:x+174]
+
+        resized = cv2.resize(crop, (0, 0), fx=4, fy=4)
+        image = Image.fromarray(resized)
+        whitelist = '-c tessedit_char_whitelist=1234567890.'
+        text = pt.image_to_string(image, config=whitelist)
+        try:
+            self.raw_ur = float(text.strip())
+        except:
+            print(color("UR could not be read.", fg='red'))
+            self.raw_ur = None
+
+    def get_ranking(self):
+        self.ranking = None
+        if self.ranked or self.loved:
+            endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}/scores'
+            response = requests.get(endpoint, headers=headers)
+            data = json.loads(response.text)
+            if 'error' in data:
+                return
+
+            scores = data['scores']
+            for rank, score in enumerate(scores, start=1):
+                if self.matches_score(score):
+                    self.ranking = rank
+                    break
+
+
+def get_oauth_headers():
+    payload = {
+        'client_id':        CLIENT_ID,
+        'client_secret':    CLIENT_SECRET,
+        'grant_type':       'client_credentials',
+        'scope':            'public'
+    }
+    response = requests.post(f'{OSU_URL}/oauth/token', data=payload)
+    data = json.loads(response.text)
+    token_type = data['token_type']
+    access_token = data['access_token']
+
+    headers = {'Authorization': f'{token_type} {access_token}'}
+    return headers
 
 
 def main():
-    replays = glob.glob(OSU_PATH + 'Replays/*')
-    scs = glob.glob(OSU_PATH + 'Screenshots/*')
+    replays = glob.glob(f'{OSU_PATH}/Replays/*')
+    scs = glob.glob(f'{OSU_PATH}/Screenshots/*')
     replay_path = max(replays, key=os.path.getctime)
     sc_path = max(scs, key=os.path.getctime)
-    db_path = 'cache.db'
-    
     replay = parse_replay_file(replay_path)
     screenshot = cv2.imread(sc_path, cv2.IMREAD_COLOR)
-    db = sqlite3.connect(db_path)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--sb', dest='sbcount', default=0)
-    parser.add_argument('-p', '--nopp', dest='pp', action='store_false')
-    parser.add_argument('-c', '--nocombo', dest='combo',
-                        action='store_false')
-    parser.add_argument('-u', '--nour', dest='ur', action='store_false')
-    parser.add_argument('-r', '--unranked', dest='ranked',
-                        action='store_false')
-    parser.add_argument('-l', '--loved', action='store_true')
-    parser.add_argument('-m', '--message', type=str)
-    args = parser.parse_args()
-    
-    title = construct_post_title(replay, screenshot, db, args)
-    db.close()
-    print(title)
-    pyperclip.copy(title)
+    global headers
+    headers = get_oauth_headers()
+    score = Score(replay, screenshot)
 
 
 if __name__ == '__main__':
     main()
+
+db.close()
