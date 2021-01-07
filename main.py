@@ -33,6 +33,7 @@ OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
 REDDIT_URL = 'https://www.reddit.com/api'
+REDDIT_OAUTH_URL = 'https://oauth.reddit.com/api'
 
 with open('api.json') as file:
     data = json.load(file)
@@ -41,6 +42,8 @@ with open('api.json') as file:
     OSU_CLIENT_SECRET = data['osu_secret']
     REDDIT_CLIENT_ID = data['reddit_id']
     REDDIT_CLIENT_SECRET = data['reddit_secret']
+    REDDIT_USERNAME = data['username']
+    REDDIT_PASSWORD = data['password']
 
 with open(os.path.join(OSU_PATH, 'osu!.notja.cfg')) as file:
     content = '[header]\n' + file.read()
@@ -330,12 +333,14 @@ def get_reddit_headers():
         'Authorization':    auth_str
     }
     payload = {
-        'grant_type':       'client_credentials',
-        'scope':            'submit'
+        'grant_type':       'password',
+        'scope':            'submit',
+        'username':         REDDIT_USERNAME,
+        'password':         REDDIT_PASSWORD
     }
     response = requests.post(endpoint, data=payload, headers=headers)
     data = json.loads(response.text)
-    token_type = data['token_type'].title()
+    token_type = data['token_type']
     access_token = data['access_token']
     
     headers['Authorization'] = f'{token_type} {access_token}'
@@ -362,6 +367,17 @@ def post_score(title):
         screenshot_url = input("Enter screenshot URL: ")
     else:
         print(color(f"Found screenshot: {screenshot_url}", fg='green'))
+
+    endpoint = f'{REDDIT_OAUTH_URL}/submit'
+    payload = {
+        'sr': 'osugame',
+        'title': title,
+        'kind': 'link',
+        'url': screenshot_url,
+        'api_type': 'json'
+    }
+    requests.post(endpoint, params=payload, headers=reddit_headers)
+    print(color("Post submitted!", fg='green'))
 
 
 def main():
