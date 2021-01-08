@@ -467,6 +467,7 @@ def main():
             try:
                 sliderbreaks = int(input("Sliderbreaks: "))
                 options.sliderbreaks = sliderbreaks
+                score.calculate_statistics()
                 title = score.construct_title(options)
                 print(title)
             except:
