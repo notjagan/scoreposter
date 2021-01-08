@@ -64,8 +64,6 @@ MODS = OrderedDict([(Mod.Easy,          "EZ"),
                     (Mod.Perfect,       "PF"),
                     (Mod.Flashlight,    "FL")])
 
-db = sqlite3.connect('cache.db')
-
 
 class TitleOptions:
 
@@ -382,6 +380,11 @@ def post_score(title):
     print(color("Post submitted!", fg='green'))
 
 
+def refresh_db(db_path=os.path.join(OSU_PATH, 'osu!.db')):
+    from osu_db_tools.osu_to_sqlite import create_db
+    create_db(db_path)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
@@ -392,7 +395,15 @@ def main():
     parser.add_argument('-u', '--no-ur', dest='show_ur',
                         action='store_false')
     parser.add_argument('-m', '--message', type=str)
+    parser.add_argument('-r', '--refresh-db', dest='refresh',
+                        action='store_true')
     args = parser.parse_args()
+
+    if args.refresh:
+        refresh_db()
+        print('Database refreshed.')
+        return
+
     options = TitleOptions(args=args)
 
     replays = glob.glob(os.path.join(OSU_PATH, 'Replays', '*'))
@@ -402,7 +413,8 @@ def main():
     replay = parse_replay_file(replay_path)
     screenshot = cv2.imread(sc_path, cv2.IMREAD_COLOR)
 
-    global osu_headers, reddit_headers
+    global osu_headers, reddit_headers, db
+    db = sqlite3.connect('cache.db')
     osu_headers = get_osu_headers()
     reddit_headers = get_reddit_headers()
     score = Score(replay, screenshot)
@@ -460,8 +472,8 @@ def main():
         elif action == 'b':
             webbrowser.open(score.beatmap['url'])
 
+    db.close()
+
 
 if __name__ == '__main__':
     main()
-
-db.close()
