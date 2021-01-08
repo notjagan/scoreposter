@@ -6,6 +6,7 @@ import json
 import glob
 import platform
 import argparse
+import webbrowser
 import configparser
 from functools import reduce
 from subprocess import check_output
@@ -92,6 +93,9 @@ class Score:
         self.replay = replay
         self.screenshot = screenshot
 
+        self.submission = None
+        self.ranking = None
+
         self.process_replay()
         self.process_beatmap()
         self.get_id()
@@ -158,7 +162,6 @@ class Score:
             set(score['mods']) == {MODS[mod] for mod in self.mods}
 
     def find_submission(self):
-        self.submission = None
         endpoint = f'{V2_URL}/users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
         response = requests.get(endpoint, params=parameters,
@@ -178,13 +181,13 @@ class Score:
         self.submitted = True
 
         if self.submission is not None:
-            beatmap = self.submission['beatmap']
+            self.beatmap = self.submission['beatmap']
         else:
             endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}'
             response = requests.get(endpoint, headers=osu_headers)
-            beatmap = json.loads(response.text)
+            self.beatmap = json.loads(response.text)
 
-        status = beatmap['status']
+        status = self.beatmap['status']
         if status == 'ranked' or status == 'approved':
             self.ranked = True
             if self.submission is not None and \
@@ -244,7 +247,6 @@ class Score:
             self.raw_ur = None
 
     def get_ranking(self):
-        self.ranking = None
         if self.ranked or self.loved:
             endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}/scores'
             response = requests.get(endpoint, headers=osu_headers)
@@ -407,10 +409,56 @@ def main():
     title = score.construct_title(options)
     print(title)
 
-    if input('Post score? ').casefold() == 'y'.casefold():
-        post_score(title)
-    else:
-        pyperclip.copy(title)
+    actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 'q']
+    action_text = "/".join(actions)
+    action = ''
+    while action != 'q':
+        action = ''
+        while action not in actions:
+            action = input(f"Action ({action_text}): ").lower()
+
+        if action == 'p':
+            if input("Post score? ").lower() == 'y':
+                post_score(title)
+        elif action == 'm':
+            message = input("Message: ")
+            if message == '':
+                message = None
+            options.message = message
+            title = score.construct_title(options)
+            print(title)
+        elif action == 'o':
+            to_toggle = input("Options (p/c/u): ")
+            if 'p' in to_toggle:
+                options.show_pp = not options.show_pp
+            if 'c' in to_toggle:
+                options.show_combo = not options.show_combo
+            if 'u' in to_toggle:
+                options.show_ur = not options.show_ur
+            title = score.construct_title(options)
+            print(title)
+        elif action == 'r':
+            print("Checking for submission...")
+            score.find_submission()
+            if score.submission is not None:
+                score.get_status()
+                score.calculate_statistics()
+                score.get_ranking()
+            else:
+                print(color("Submission not found.", fg='red'))
+        elif action == 's':
+            try:
+                sliderbreaks = int(input("Sliderbreaks: "))
+                options.sliderbreaks = sliderbreaks
+                title = score.construct_title(options)
+                print(title)
+            except:
+                continue
+        elif action == 'c':
+            pyperclip.copy(title)
+            print(color("Title copied to clipboard!", fg='green'))
+        elif action == 'b':
+            webbrowser.open(score.beatmap['url'])
 
 
 if __name__ == '__main__':
