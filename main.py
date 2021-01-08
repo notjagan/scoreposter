@@ -77,6 +77,7 @@ class TitleOptions:
         if args is not None:
             self.sliderbreaks = args.sliderbreaks
             self.show_pp = args.show_pp
+            self.show_fc_pp = args.show_fc_pp
             self.show_combo = args.show_combo
             self.show_ur = args.show_ur
             self.message = args.message
@@ -285,7 +286,7 @@ class Score:
                 pp_text += " if ranked"
             elif not self.submitted:
                 pp_text += " if submitted"
-            if not fc:
+            if options.show_fc_pp and not fc:
                 pp_text += f" ({self.fcpp:.0f}pp for FC)"
             segments.append(pp_text)
 
@@ -390,6 +391,8 @@ def main():
     parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
     parser.add_argument('-p', '--no-pp', dest='show_pp',
                         action='store_false')
+    parser.add_argument('-f', '--no-fc-pp', dest='show_fc_pp',
+                        action='store_false')
     parser.add_argument('-c', '--no-combo', dest='show_combo',
                         action='store_false')
     parser.add_argument('-u', '--no-ur', dest='show_ur',
@@ -440,9 +443,11 @@ def main():
             title = score.construct_title(options)
             print(title)
         elif action == 'o':
-            to_toggle = input("Options (p/c/u): ")
+            to_toggle = input("Options (p/f/c/u): ")
             if 'p' in to_toggle:
                 options.show_pp = not options.show_pp
+            if 'f' in to_toggle:
+                options.show_fc_pp = not options.show_fc_pp
             if 'c' in to_toggle:
                 options.show_combo = not options.show_combo
             if 'u' in to_toggle:
