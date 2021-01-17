@@ -424,7 +424,7 @@ def main():
     title = score.construct_title(options)
     print(title)
 
-    actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 'q']
+    actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 't', 'q']
     action_text = "/".join(actions)
     action = ''
     while action != 'q':
@@ -477,6 +477,8 @@ def main():
             print(color("Title copied to clipboard!", fg='green'))
         elif action == 'b':
             webbrowser.open(score.beatmap['url'])
+        elif action == 't':
+            title = input("Title: ")
 
     db.close()
 
