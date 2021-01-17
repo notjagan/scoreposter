@@ -206,7 +206,7 @@ class Score:
                                  self.mods, 0))
 
         self.stars = ezpp_stars(ez)
-        self.max_combo = ezpp_max_combo(ez)
+        self.max_combo = max(self.combo, ezpp_max_combo(ez))
 
         ezpp_set_combo(ez, self.combo)
         ezpp_set_nmiss(ez, self.misses)
