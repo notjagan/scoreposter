@@ -199,9 +199,9 @@ class Score:
         ez = ezpp_new()
         ezpp_set_autocalc(ez, 1)
 
-        with open(self.map_path, 'rb') as file:
-            data = file.read().decode('utf-8')
-            ezpp_data_dup(ez, data, len(data))
+        with open(self.map_path) as file:
+            data = file.read()
+            ezpp_data_dup(ez, data, len(data.encode('utf-8')))
         ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
                                  self.mods, 0))
 
