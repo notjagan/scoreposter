@@ -290,7 +290,7 @@ class Score:
                 pp_text += f" ({self.fcpp:.0f}pp [old] for FC)"
             segments.append(pp_text)
 
-        if options.show_ur:
+        if options.show_ur and self.raw_ur is not None:
             dt = Mod.DoubleTime in self.mods or \
                  Mod.Nightcore in self.mods
             if dt:
