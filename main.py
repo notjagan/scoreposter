@@ -292,7 +292,7 @@ class Score:
             elif not self.submitted:
                 pp_text += " if submitted"
             if options.show_fc_pp and not fc:
-                pp_text += f" ({self.fcpp:.0f}pp [old] for FC)"
+                pp_text += f" ({self.fcpp:.0f}pp {{old}} for FC)"
             segments.append(pp_text)
 
         if options.show_ur and self.raw_ur is not None:
