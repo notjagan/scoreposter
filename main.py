@@ -135,6 +135,7 @@ class Score:
 
     def get_mods(self):
         self.mods = set(self.replay.mod_combination)
+        self.mods.discard(Mod.NoMod)
         if Mod.Nightcore in self.mods:
             self.mods.discard(Mod.DoubleTime)
         if Mod.Perfect in self.mods:
@@ -260,11 +261,15 @@ class Score:
                     break
 
     def construct_title(self, options):
-        modstring = "".join(string for mod, string in MODS.items()
+        if self.mods:
+            modstring = ''.join(string for mod, string in MODS.items()
                             if mod in self.mods)
+            base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*) {self.accuracy:.2f}%"
+        else:
+            base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*) {self.accuracy:.2f}%"
+
         fc = self.misses == 0 and options.sliderbreaks == 0
 
-        base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*) {self.accuracy:.2f}%"
         if self.misses != 0:
             base += f" {self.misses}xMiss"
         if options.sliderbreaks != 0:
