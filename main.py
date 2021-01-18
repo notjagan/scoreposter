@@ -376,11 +376,11 @@ def post_score(title):
 
     endpoint = f'{REDDIT_OAUTH_URL}/submit'
     payload = {
-        'sr': 'osugame',
-        'title': title,
-        'kind': 'link',
-        'url': screenshot_url,
-        'api_type': 'json'
+        'sr':               'osugame',
+        'title':            title,
+        'kind':             'link',
+        'url':              screenshot_url,
+        'api_type':         'json'
     }
     requests.post(endpoint, params=payload, headers=reddit_headers)
     print(color("Post submitted!", fg='green'))
