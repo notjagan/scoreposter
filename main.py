@@ -232,7 +232,7 @@ class Score:
         dilation = cv2.dilate(thresh, np.ones((3, 3), np.uint8))
         opening = cv2.morphologyEx(dilation, cv2.MORPH_OPEN,
                                    np.ones((5, 5), np.uint8))
-        mask = region > 220
+        mask = region > 240
         y, x = np.min(np.where(opening * mask), axis=1)
         crop = region[y+38:y+55, x+115:x+174]
 
