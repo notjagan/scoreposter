@@ -264,20 +264,25 @@ class Score:
         if self.mods:
             modstring = ''.join(string for mod, string in MODS.items()
                             if mod in self.mods)
-            base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*) {self.accuracy:.2f}%"
+            base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*)"
         else:
-            base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*) {self.accuracy:.2f}%"
+            base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*)"
 
         fc = self.misses == 0 and options.sliderbreaks == 0
 
-        if self.misses != 0:
-            base += f" {self.misses}xMiss"
-        if options.sliderbreaks != 0:
-            base += f" {options.sliderbreaks}xSB"
-        if options.show_combo:
-            base += f" {self.combo}/{self.max_combo}x"
-        if fc:
-            base += " FC"
+        if self.accuracy == 100:
+            base += " SS"
+        else:
+            base += f" {self.accuracy:.2f}%"
+            if self.misses != 0:
+                base += f" {self.misses}xMiss"
+            if options.sliderbreaks != 0:
+                base += f" {options.sliderbreaks}xSB"
+            if options.show_combo:
+                base += f" {self.combo}/{self.max_combo}x"
+            if fc:
+                base += " FC"
+
         if self.ranking is not None:
             base += f" #{self.ranking}"
         if self.loved:
