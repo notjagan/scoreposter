@@ -443,8 +443,7 @@ def main():
             action = input(f"Action ({action_text}): ").lower()
 
         if action == 'p':
-            if input("Post score? ").lower() == 'y':
-                post_score(title)
+            post_score(title)
         elif action == 'm':
             message = input("Message: ")
             if message == '':
