@@ -30,13 +30,16 @@ convert_path = lambda path: \
             else path
 
 OSU_PATH = convert_path(r'C:\Users\notja\AppData\Local\osu!')
+KEYS_PATH = 'keys.json'
+CONFIG_PATH = os.path.join(OSU_PATH, 'osu!.notja.cfg')
+
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
 REDDIT_URL = 'https://www.reddit.com/api'
 REDDIT_OAUTH_URL = 'https://oauth.reddit.com/api'
 
-with open('keys.json') as file:
+with open(KEYS_PATH) as file:
     data = json.load(file)
 OSU_API_KEY = data['osu_key']
 OSU_CLIENT_ID = data['osu_id']
@@ -46,7 +49,7 @@ REDDIT_CLIENT_SECRET = data['reddit_secret']
 REDDIT_USERNAME = data['username']
 REDDIT_PASSWORD = data['password']
 
-with open(os.path.join(OSU_PATH, 'osu!.notja.cfg')) as file:
+with open(CONFIG_PATH) as file:
     content = '[header]\n' + file.read()
 
 config = configparser.RawConfigParser()
