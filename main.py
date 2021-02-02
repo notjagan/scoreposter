@@ -38,13 +38,13 @@ REDDIT_OAUTH_URL = 'https://oauth.reddit.com/api'
 
 with open('keys.json') as file:
     data = json.load(file)
-    OSU_API_KEY = data['osu_key']
-    OSU_CLIENT_ID = data['osu_id']
-    OSU_CLIENT_SECRET = data['osu_secret']
-    REDDIT_CLIENT_ID = data['reddit_id']
-    REDDIT_CLIENT_SECRET = data['reddit_secret']
-    REDDIT_USERNAME = data['username']
-    REDDIT_PASSWORD = data['password']
+OSU_API_KEY = data['osu_key']
+OSU_CLIENT_ID = data['osu_id']
+OSU_CLIENT_SECRET = data['osu_secret']
+REDDIT_CLIENT_ID = data['reddit_id']
+REDDIT_CLIENT_SECRET = data['reddit_secret']
+REDDIT_USERNAME = data['username']
+REDDIT_PASSWORD = data['password']
 
 with open(os.path.join(OSU_PATH, 'osu!.notja.cfg')) as file:
     content = '[header]\n' + file.read()
@@ -202,7 +202,7 @@ class Score:
 
         with open(self.map_path, encoding='utf-8') as file:
             data = file.read()
-            ezpp_data_dup(ez, data, len(data.encode('utf-8')))
+        ezpp_data_dup(ez, data, len(data.encode('utf-8')))
         ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
                                  self.mods, 0))
 
