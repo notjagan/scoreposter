@@ -36,7 +36,7 @@ V2_URL = f'{V1_URL}/v2'
 REDDIT_URL = 'https://www.reddit.com/api'
 REDDIT_OAUTH_URL = 'https://oauth.reddit.com/api'
 
-with open('api.json') as file:
+with open('keys.json') as file:
     data = json.load(file)
     OSU_API_KEY = data['osu_key']
     OSU_CLIENT_ID = data['osu_id']
