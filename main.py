@@ -137,7 +137,8 @@ class Score:
         self.user_id = int(data['user_id'])
 
     def get_mods(self):
-        self.mods = set(self.replay.mod_combination)
+        self.mods = {mod for mod in Mod
+                     if mod & self.replay.mod_combination}
         self.mods.discard(Mod.NoMod)
         if Mod.Nightcore in self.mods:
             self.mods.discard(Mod.DoubleTime)
