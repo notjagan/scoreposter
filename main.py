@@ -18,11 +18,10 @@ import requests
 import pyperclip
 import numpy as np
 from oppai import *
-from PIL import Image
 from colors import color
+from circleguard import *
 from osrparse.enums import Mod
 from osrparse import parse_replay_file
-from pytesseract import pytesseract as pt
 
 ON_WSL = "microsoft".casefold() in platform.uname().release.casefold()
 convert_path = lambda path: \
@@ -48,6 +47,8 @@ REDDIT_CLIENT_ID = data['reddit_id']
 REDDIT_CLIENT_SECRET = data['reddit_secret']
 REDDIT_USERNAME = data['username']
 REDDIT_PASSWORD = data['password']
+
+cg = Circleguard(OSU_API_KEY)
 
 with open(CONFIG_PATH) as file:
     content = '[header]\n' + file.read()
@@ -91,9 +92,9 @@ class TitleOptions:
 
 class Score:
 
-    def __init__(self, replay, screenshot):
-        self.replay = replay
-        self.screenshot = screenshot
+    def __init__(self, replay_path):
+        self.replay_path = replay_path
+        self.replay = parse_replay_file(replay_path)
 
         self.submission = None
         self.ranking = None
@@ -228,27 +229,8 @@ class Score:
         self.fcpp = ezpp_pp(ez)
 
     def find_ur(self):
-        grayscale = cv2.cvtColor(self.screenshot, cv2.COLOR_BGR2GRAY)
-        region = grayscale[864:864+144, 363:363+663]
-        laplacian = cv2.Laplacian(region, cv2.CV_64F)
-        ret, thresh = cv2.threshold(laplacian, 100, 255,
-                                    cv2.THRESH_BINARY)
-        dilation = cv2.dilate(thresh, np.ones((3, 3), np.uint8))
-        opening = cv2.morphologyEx(dilation, cv2.MORPH_OPEN,
-                                   np.ones((5, 5), np.uint8))
-        mask = region > 240
-        y, x = np.min(np.where(opening * mask), axis=1)
-        crop = region[y+38:y+55, x+115:x+174]
-
-        resized = cv2.resize(crop, (0, 0), fx=4, fy=4)
-        image = Image.fromarray(resized)
-        whitelist = '-c tessedit_char_whitelist=1234567890.'
-        text = pt.image_to_string(image, config=whitelist)
-        try:
-            self.raw_ur = float(text.strip())
-        except:
-            print(color("UR could not be read.", fg='red'))
-            self.raw_ur = None
+        replay = ReplayPath(self.replay_path)
+        self.ur = cg.ur(replay)
 
     def get_ranking(self):
         if self.ranked or self.loved:
@@ -304,15 +286,13 @@ class Score:
                 pp_text += f" ({self.fcpp:.0f}pp {{old}} for FC)"
             segments.append(pp_text)
 
-        if options.show_ur and self.raw_ur is not None:
+        if options.show_ur and self.ur is not None:
             dt = Mod.DoubleTime in self.mods or \
                  Mod.Nightcore in self.mods
             if dt:
-                ur = self.raw_ur * 2/3
-                segments.append(f"{ur:.2f} cv.UR")
+                segments.append(f"{self.ur:.2f} cv.UR")
             else:
-                ur = self.raw_ur
-                segments.append(f"{ur:.2f} UR")
+                segments.append(f"{self.ur:.2f} UR")
 
         if options.message is not None:
             segments.append(options.message)
@@ -424,17 +404,13 @@ def main():
     options = TitleOptions(args=args)
 
     replays = glob.glob(os.path.join(OSU_PATH, 'Replays', '*'))
-    scs = glob.glob(os.path.join(OSU_PATH, 'Screenshots', '*'))
     replay_path = max(replays, key=os.path.getctime)
-    sc_path = max(scs, key=os.path.getctime)
-    replay = parse_replay_file(replay_path)
-    screenshot = cv2.imread(sc_path, cv2.IMREAD_COLOR)
 
     global osu_headers, reddit_headers, db
     db = sqlite3.connect('cache.db')
     osu_headers = get_osu_headers()
     reddit_headers = get_reddit_headers()
-    score = Score(replay, screenshot)
+    score = Score(replay_path)
     title = score.construct_title(options)
     print(title)
 
