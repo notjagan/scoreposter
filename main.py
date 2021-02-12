@@ -382,6 +382,11 @@ def refresh_db(db_path=os.path.join(OSU_PATH, 'osu!.db')):
     create_db(db_path)
 
 
+db = sqlite3.connect('cache.db')
+osu_headers = get_osu_headers()
+reddit_headers = get_reddit_headers()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
@@ -408,10 +413,6 @@ def main():
     replays = glob.glob(os.path.join(OSU_PATH, 'Replays', '*'))
     replay_path = max(replays, key=os.path.getctime)
 
-    global osu_headers, reddit_headers, db
-    db = sqlite3.connect('cache.db')
-    osu_headers = get_osu_headers()
-    reddit_headers = get_reddit_headers()
     score = Score(replay_path)
     title = score.construct_title(options)
     print(title)
