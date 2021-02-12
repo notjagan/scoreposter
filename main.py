@@ -228,6 +228,8 @@ class Score:
         ezpp_set_nmiss(ez, 0)
         self.fcpp = ezpp_pp(ez)
 
+        ezpp_free(ez)
+
     def find_ur(self):
         replay = ReplayPath(self.replay_path)
         self.ur = cg.ur(replay)
