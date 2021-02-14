@@ -345,25 +345,7 @@ def get_reddit_headers():
 
 
 def post_score(title):
-    screenshot_url = None
-    if not ON_WSL:
-        from pywinauto import Application
-        app = Application(backend='uia')
-        try:
-            app.connect(title_re=r'[0-9a-f]{4} \(1920.1080\)')
-            dlg = app.top_window()
-            element = "Address and search bar"
-            child = dlg.child_window(title=element, control_type="Edit")
-            screenshot_url = child.get_value()
-            if not screenshot_url.startswith('osu'):
-                screenshot_url = None
-        except:
-            pass
-
-    if screenshot_url == None:
-        screenshot_url = input("Enter screenshot URL: ")
-    else:
-        print(color(f"Found screenshot: {screenshot_url}", fg='green'))
+    screenshot_url = input("Enter screenshot URL: ")
 
     endpoint = f'{REDDIT_OAUTH_URL}/submit'
     payload = {
