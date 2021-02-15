@@ -266,7 +266,7 @@ class Score:
                 base += f" {self.misses}xMiss"
             if options.sliderbreaks != 0:
                 base += f" {options.sliderbreaks}xSB"
-            if options.show_combo:
+            if options.show_combo or not fc:
                 base += f" {self.combo}/{self.max_combo}x"
             if fc:
                 base += " FC"
@@ -377,7 +377,7 @@ def main():
     parser.add_argument('-f', '--no-fc-pp', dest='show_fc_pp',
                         action='store_false')
     parser.add_argument('-c', '--no-combo', dest='show_combo',
-                        action='store_false')
+                        action='store_true')
     parser.add_argument('-u', '--no-ur', dest='show_ur',
                         action='store_false')
     parser.add_argument('-m', '--message', type=str)
