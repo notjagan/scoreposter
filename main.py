@@ -387,8 +387,8 @@ def main():
 
     options = TitleOptions(args=args)
 
-    replays = (OSU_PATH / 'Replays').glob('*.osr')
     mtime = lambda path: path.stat().st_mtime
+    replays = (OSU_PATH / 'Replays').glob('*.osr')
     screenshots = (OSU_PATH / 'Screenshots').glob('*.jpg')
     replay_path = max(replays, key=mtime)
     screenshot_path = max(screenshots, key=mtime)
