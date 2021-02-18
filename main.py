@@ -117,9 +117,8 @@ class Score:
         self.misses = self.replay.misses
 
     def process_beatmap(self):
-        cur = db.cursor()
-        cur.execute('SELECT beatmap_id, folder_name, map_file, artist, title, difficulty FROM maps WHERE md5_hash=?',
-                    (self.replay.beatmap_hash,))
+        cur = db.execute('SELECT beatmap_id, folder_name, map_file, artist, title, difficulty FROM maps WHERE md5_hash=?',
+                         (self.replay.beatmap_hash,))
         result = cur.fetchone()
         cur.close()
 
