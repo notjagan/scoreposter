@@ -98,6 +98,7 @@ class Score:
 
         self.submission = None
         self.ranking = None
+        self.cg_replay = None
 
         self.process_replay()
         self.process_beatmap()
@@ -119,11 +120,36 @@ class Score:
         cur = db.cursor()
         cur.execute('SELECT beatmap_id, folder_name, map_file, artist, title, difficulty FROM maps WHERE md5_hash=?',
                     (self.replay.beatmap_hash,))
-        self.beatmap_id, folder_name, map_file, self.artist, \
-            self.title, self.difficulty = cur.fetchone()
-        self.map_path = os.path.join(BEATMAPS_DIR, folder_name,
-                                     map_file)
+        result = cur.fetchone()
         cur.close()
+
+        if result is not None:
+            self.beatmap_id, folder_name, map_file, self.artist, \
+                self.title, self.difficulty = result
+            self.map_path = os.path.join(BEATMAPS_DIR, folder_name,
+                                        map_file)
+
+        else:
+            print(color("Beatmap not in osu!.db, defaulting to Circleguard version.",
+                        fg='red'))
+            self.cg_replay = ReplayPath(self.replay_path)
+            beatmap = cg.beatmap(self.cg_replay)
+
+            self.beatmap_id = self.cg_replay.map_info.map_id
+            if self.beatmap_id is None:
+                print(color("Beatmap not found.", fg='red'))
+            print(color("Cached beatmap found!", fg='green'))
+
+            folder_name = cg.library.path
+            cur = cg.library._db.execute('SELECT path from beatmaps WHERE md5=?',
+                                         (self.replay.beatmap_hash,))
+            map_file = cur.fetchone()[0]
+            self.map_path = folder_name / map_file
+            cur.close()
+
+            self.artist = beatmap.artist
+            self.title = beatmap.title
+            self.difficulty = beatmap.version
 
     def get_id(self):
         endpoint = f'{V1_URL}/get_user'
@@ -231,8 +257,9 @@ class Score:
         ezpp_free(ez)
 
     def find_ur(self):
-        replay = ReplayPath(self.replay_path)
-        self.ur = cg.ur(replay)
+        if self.cg_replay is None:
+            self.cg_replay = ReplayPath(self.replay_path)
+        self.ur = cg.ur(self.cg_replay)
 
     def get_ranking(self):
         if self.ranked or self.loved:
