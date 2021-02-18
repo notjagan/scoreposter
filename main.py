@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 
-import os
 import sys
 import json
-import glob
 import platform
 import argparse
 import webbrowser
 import configparser
+from pathlib import Path
 from functools import reduce
+from os.path import getctime
 from subprocess import check_output
 from collections import OrderedDict
 
@@ -24,13 +24,13 @@ from osrparse.enums import Mod
 from osrparse import parse_replay_file
 
 ON_WSL = "microsoft".casefold() in platform.uname().release.casefold()
-convert_path = lambda path: \
+convert_path = lambda path: Path(
         check_output(['wslpath', path]).decode().strip() if ON_WSL \
-            else path
+            else path)
 
 OSU_PATH = convert_path(r'C:\Users\notja\AppData\Local\osu!')
 KEYS_PATH = 'keys.json'
-CONFIG_PATH = os.path.join(OSU_PATH, 'osu!.notja.cfg')
+CONFIG_PATH = OSU_PATH / 'osu!.notja.cfg'
 
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
@@ -125,8 +125,7 @@ class Score:
         if result is not None:
             self.beatmap_id, folder_name, map_file, self.artist, \
                 self.title, self.difficulty = result
-            self.map_path = os.path.join(BEATMAPS_DIR, folder_name,
-                                        map_file)
+            self.map_path = BEATMAPS_DIR / folder_name / map_file
 
         else:
             print(color("Beatmap not in osu!.db, defaulting to Circleguard version.",
@@ -385,7 +384,7 @@ def post_score(title):
     print(color("Post submitted!", fg='green'))
 
 
-def refresh_db(db_path=os.path.join(OSU_PATH, 'osu!.db')):
+def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     from osu_db_tools.osu_to_sqlite import create_db
     create_db(db_path)
 
@@ -418,8 +417,8 @@ def main():
 
     options = TitleOptions(args=args)
 
-    replays = glob.glob(os.path.join(OSU_PATH, 'Replays', '*'))
-    replay_path = max(replays, key=os.path.getctime)
+    replays = (OSU_PATH / 'Replays').glob('*.osr')
+    replay_path = max(replays, key=getctime)
 
     score = Score(replay_path)
     title = score.construct_title(options)
