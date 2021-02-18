@@ -13,6 +13,7 @@ from subprocess import check_output
 from collections import OrderedDict
 
 import cv2
+import praw
 import oppai
 import sqlite3
 import requests
@@ -35,8 +36,6 @@ CONFIG_PATH = OSU_PATH / 'osu!.notja.cfg'
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
-REDDIT_URL = 'https://www.reddit.com/api'
-REDDIT_OAUTH_URL = 'https://oauth.reddit.com/api'
 
 with open(KEYS_PATH) as file:
     data = json.load(file)
@@ -49,6 +48,13 @@ REDDIT_USERNAME = data['username']
 REDDIT_PASSWORD = data['password']
 
 cg = Circleguard(OSU_API_KEY)
+reddit = praw.Reddit(client_id=REDDIT_CLIENT_ID,
+                     client_secret=REDDIT_CLIENT_SECRET,
+                     username=REDDIT_USERNAME,
+                     password=REDDIT_PASSWORD,
+                     user_agent='windows:scoreposter:v1.1.0 (by /u/notjagan)')
+reddit.validate_on_submit = True
+subreddit = reddit.subreddit("osugame")
 
 with open(CONFIG_PATH) as file:
     content = '[header]\n' + file.read()
@@ -345,42 +351,9 @@ def get_osu_headers():
     return headers
 
 
-def get_reddit_headers():
-    auth_str = requests.auth._basic_auth_str(REDDIT_CLIENT_ID,
-                                             REDDIT_CLIENT_SECRET)
-    agent = 'windows:scoreposter:v1.1.0 (by /u/notjagan)'
-    endpoint = f'{REDDIT_URL}/v1/access_token'
-    headers = {
-        'User-Agent':       agent,
-        'Authorization':    auth_str
-    }
-    payload = {
-        'grant_type':       'password',
-        'scope':            'submit',
-        'username':         REDDIT_USERNAME,
-        'password':         REDDIT_PASSWORD
-    }
-    response = requests.post(endpoint, data=payload, headers=headers)
-    data = json.loads(response.text)
-    token_type = data['token_type']
-    access_token = data['access_token']
-    
-    headers['Authorization'] = f'{token_type} {access_token}'
-    return headers
-
-
 def post_score(title):
     screenshot_url = input("Enter screenshot URL: ")
-
-    endpoint = f'{REDDIT_OAUTH_URL}/submit'
-    payload = {
-        'sr':               'osugame',
-        'title':            title,
-        'kind':             'link',
-        'url':              screenshot_url,
-        'api_type':         'json'
-    }
-    requests.post(endpoint, params=payload, headers=reddit_headers)
+    subreddit.submit(title, url=screenshot_url)
     print(color("Post submitted!", fg='green'))
 
 
@@ -391,7 +364,6 @@ def refresh_db(db_path=OSU_PATH / 'osu!.db'):
 
 db = sqlite3.connect('cache.db')
 osu_headers = get_osu_headers()
-reddit_headers = get_reddit_headers()
 
 
 def main():
