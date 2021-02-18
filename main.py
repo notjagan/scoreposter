@@ -13,15 +13,15 @@ from subprocess import check_output
 from collections import OrderedDict
 
 import cv2
+import oppai
 import sqlite3
 import requests
 import pyperclip
 import numpy as np
-from oppai import *
 from colors import color
-from circleguard import *
 from osrparse.enums import Mod
 from osrparse import parse_replay_file
+from circleguard import Circleguard, ReplayPath
 
 ON_WSL = "microsoft".casefold() in platform.uname().release.casefold()
 convert_path = lambda path: Path(
@@ -226,33 +226,33 @@ class Score:
             self.loved = True
 
     def calculate_statistics(self):
-        ez = ezpp_new()
-        ezpp_set_autocalc(ez, 1)
+        ez = oppai.ezpp_new()
+        oppai.ezpp_set_autocalc(ez, 1)
 
         with open(self.map_path, encoding='utf-8') as file:
             data = file.read()
-        ezpp_data_dup(ez, data, len(data.encode('utf-8')))
-        ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
+        oppai.ezpp_data_dup(ez, data, len(data.encode('utf-8')))
+        oppai.ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
                                  self.mods, 0))
 
-        self.stars = ezpp_stars(ez)
-        self.max_combo = max(self.combo, ezpp_max_combo(ez))
+        self.stars = oppai.ezpp_stars(ez)
+        self.max_combo = max(self.combo, oppai.ezpp_max_combo(ez))
 
-        ezpp_set_combo(ez, self.combo)
-        ezpp_set_nmiss(ez, self.misses)
-        ezpp_set_accuracy_percent(ez, self.accuracy)
+        oppai.ezpp_set_combo(ez, self.combo)
+        oppai.ezpp_set_nmiss(ez, self.misses)
+        oppai.ezpp_set_accuracy_percent(ez, self.accuracy)
 
         if self.submission is not None and \
            self.ranked and self.submitted:
             self.pp = self.submission['pp']
         else:
-            self.pp = ezpp_pp(ez)
+            self.pp = oppai.ezpp_pp(ez)
 
-        ezpp_set_combo(ez, self.max_combo)
-        ezpp_set_nmiss(ez, 0)
-        self.fcpp = ezpp_pp(ez)
+        oppai.ezpp_set_combo(ez, self.max_combo)
+        oppai.ezpp_set_nmiss(ez, 0)
+        self.fcpp = oppai.ezpp_pp(ez)
 
-        ezpp_free(ez)
+        oppai.ezpp_free(ez)
 
     def find_ur(self):
         if self.cg_replay is None:
