@@ -8,7 +8,6 @@ import webbrowser
 import configparser
 from pathlib import Path
 from functools import reduce
-from os.path import getctime
 from subprocess import check_output
 from collections import OrderedDict
 
@@ -351,9 +350,8 @@ def get_osu_headers():
     return headers
 
 
-def post_score(title):
-    screenshot_url = input("Enter screenshot URL: ")
-    subreddit.submit(title, url=screenshot_url)
+def post_score(title, screenshot_path):
+    subreddit.submit_image(title, image_path=screenshot_path)
     print(color("Post submitted!", fg='green'))
 
 
@@ -390,7 +388,10 @@ def main():
     options = TitleOptions(args=args)
 
     replays = (OSU_PATH / 'Replays').glob('*.osr')
-    replay_path = max(replays, key=getctime)
+    mtime = lambda path: path.stat().st_mtime
+    screenshots = (OSU_PATH / 'Screenshots').glob('*.jpg')
+    replay_path = max(replays, key=mtime)
+    screenshot_path = max(screenshots, key=mtime)
 
     score = Score(replay_path)
     title = score.construct_title(options)
@@ -405,7 +406,7 @@ def main():
             action = input(f"Action ({action_text}): ").lower()
 
         if action == 'p':
-            post_score(title)
+            post_score(title, screenshot_path)
         elif action == 'm':
             message = input("Message: ")
             if message == '':
