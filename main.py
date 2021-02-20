@@ -2,14 +2,17 @@
 
 import sys
 import json
+import shutil
 import platform
 import argparse
 import webbrowser
 import configparser
+from re import search
 from pathlib import Path
 from functools import reduce
 from subprocess import check_output
 from collections import OrderedDict
+from tempfile import NamedTemporaryFile
 
 import cv2
 import praw
@@ -20,6 +23,7 @@ import pyperclip
 import numpy as np
 from colors import color
 from osrparse.enums import Mod
+from slider.beatmap import Beatmap
 from osrparse import parse_replay_file
 from circleguard import Circleguard, ReplayPath
 
@@ -130,8 +134,18 @@ class Score:
         if result is not None:
             self.beatmap_id, folder_name, map_file, self.artist, \
                 self.title, self.difficulty = result
-            self.map_path = BEATMAPS_DIR / folder_name / map_file
+            map_folder = BEATMAPS_DIR / folder_name
+            self.map_path = map_folder / map_file
 
+            with open(self.map_path) as file:
+                lines = file.readlines()
+            groups = Beatmap._find_groups(lines)
+            events = groups['Events']
+            for line in events:
+                if any(ext in line for ext in ['.jpg', '.jpeg', '.png']):
+                    bg_file = search('"(.+?)"', line).group(1)
+                    break
+            self.bg_path = map_folder / bg_file
         else:
             print(color("Beatmap not in osu!.db, defaulting to Circleguard version.",
                         fg='red'))
@@ -153,6 +167,17 @@ class Score:
             self.artist = beatmap.artist
             self.title = beatmap.title
             self.difficulty = beatmap.version
+
+            endpoint = f'{V2_URL}/beatmaps/{self.beatmap_id}'
+            response = requests.get(endpoint, headers=osu_headers)
+            data = json.loads(response.text)
+            cover_url = data['beatmapset']['covers']['cover@2x']
+
+            response = requests.get(cover_url, stream=True)
+            response.raw_decode_content = True
+            with NamedTemporaryFile(mode='wb', delete=False) as image:
+                shutil.copyfileobj(response.raw, image)
+                self.bg_path = image.name
 
     def get_id(self):
         endpoint = f'{V1_URL}/get_user'
