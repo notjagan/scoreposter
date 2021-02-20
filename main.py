@@ -1,31 +1,28 @@
 #!/usr/bin/python3
 
-import sys
+import argparse
 import json
 import shutil
 import platform
-import argparse
 import webbrowser
-import configparser
 from re import search
-from pathlib import Path
-from functools import reduce
-from subprocess import check_output
+import sqlite3
 from collections import OrderedDict
+from functools import reduce
+from pathlib import Path
+from subprocess import check_output
 from tempfile import NamedTemporaryFile
 
-import cv2
-import praw
-import oppai
-import sqlite3
-import requests
-import pyperclip
 import numpy as np
+import oppai
+import praw
+import pyperclip
+import requests
+from circleguard import Circleguard, ReplayPath
 from colors import color
+from osrparse import parse_replay_file
 from osrparse.enums import Mod
 from slider.beatmap import Beatmap
-from osrparse import parse_replay_file
-from circleguard import Circleguard, ReplayPath
 
 ON_WSL = "microsoft".casefold() in platform.uname().release.casefold()
 convert_path = lambda path: Path(
