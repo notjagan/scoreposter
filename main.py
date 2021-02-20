@@ -10,8 +10,6 @@ import sqlite3
 from collections import OrderedDict
 from functools import reduce
 from pathlib import Path
-from subprocess import check_output
-from tempfile import NamedTemporaryFile
 
 import numpy as np
 import oppai
@@ -24,14 +22,8 @@ from osrparse import parse_replay_file
 from osrparse.enums import Mod
 from slider.beatmap import Beatmap
 
-ON_WSL = "microsoft".casefold() in platform.uname().release.casefold()
-convert_path = lambda path: Path(
-        check_output(['wslpath', path]).decode().strip() if ON_WSL \
-            else path)
-
-OSU_PATH = convert_path(r'C:\Users\notja\AppData\Local\osu!')
 KEYS_PATH = 'keys.json'
-CONFIG_PATH = OSU_PATH / 'osu!.notja.cfg'
+CONFIG_PATH = 'config.json'
 
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
@@ -57,11 +49,9 @@ reddit.validate_on_submit = True
 subreddit = reddit.subreddit("osugame")
 
 with open(CONFIG_PATH) as file:
-    content = '[header]\n' + file.read()
-
-config = configparser.RawConfigParser()
-config.read_string(content)
-BEATMAPS_DIR = convert_path(config['header']['BeatmapDirectory'])
+    data = json.load(file)
+OSU_PATH = Path(data['osu_path'])
+BEATMAPS_DIR = Path(data['beatmaps_dir'])
 
 MODS = OrderedDict([(Mod.Easy,          "EZ"),
                     (Mod.NoFail,        "NF"),
