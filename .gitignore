@@ -1,5 +1,5 @@
 keys.json
 cache.db
-osu_db_tools/
 config.json
-__pycache__
+osu_db_tools/
+__pycache__/
