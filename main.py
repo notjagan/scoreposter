@@ -9,6 +9,7 @@ from collections import OrderedDict
 from functools import reduce
 from pathlib import Path
 from re import search
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 import oppai
