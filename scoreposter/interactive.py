@@ -4,9 +4,8 @@ import argparse
 import webbrowser
 
 import pyperclip
-from colors import color
-
 import utils
+from colors import color
 from score import Score
 from title import TitleOptions, construct_title
 

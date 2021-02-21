@@ -6,14 +6,12 @@ from tempfile import NamedTemporaryFile
 
 import oppai
 import requests
+import utils
 from circleguard import ReplayPath
 from colors import color
 from osrparse import parse_replay_file
 from osrparse.enums import Mod
 from slider.beatmap import Beatmap
-
-import title
-import utils
 
 
 class Score:

@@ -1,4 +1,4 @@
-from utils import Mod, MODS
+from utils import MODS, Mod
 
 
 class TitleOptions:
