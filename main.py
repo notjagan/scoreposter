@@ -3,13 +3,12 @@
 import argparse
 import json
 import shutil
-import platform
-import webbrowser
-from re import search
 import sqlite3
+import webbrowser
 from collections import OrderedDict
 from functools import reduce
 from pathlib import Path
+from re import search
 
 import numpy as np
 import oppai
@@ -113,7 +112,8 @@ class Score:
         self.misses = self.replay.misses
 
     def process_beatmap(self):
-        cur = db.execute('SELECT beatmap_id, folder_name, map_file, artist, title, difficulty FROM maps WHERE md5_hash=?',
+        cur = db.execute('SELECT beatmap_id, folder_name, map_file, artist, '
+                         'title, difficulty FROM maps WHERE md5_hash=?',
                          (self.replay.beatmap_hash,))
         result = cur.fetchone()
         cur.close()
@@ -236,8 +236,7 @@ class Score:
         status = self.beatmap['status']
         if status == 'ranked' or status == 'approved':
             self.ranked = True
-            if self.submission is not None and \
-               self.submission['pp'] is None:
+            if self.submission is not None and self.submission['pp'] is None:
                 self.submitted = False
         elif status == 'loved':
             self.loved = True
@@ -249,8 +248,7 @@ class Score:
         with open(self.map_path, encoding='utf-8') as file:
             data = file.read()
         oppai.ezpp_data_dup(ez, data, len(data.encode('utf-8')))
-        oppai.ezpp_set_mods(ez, reduce(lambda a, v: a | v.value,
-                                 self.mods, 0))
+        oppai.ezpp_set_mods(ez, reduce(lambda a, v: a | v.value, self.mods, 0))
 
         self.stars = oppai.ezpp_stars(ez)
         self.max_combo = max(self.combo, oppai.ezpp_max_combo(ez))
@@ -259,8 +257,7 @@ class Score:
         oppai.ezpp_set_nmiss(ez, self.misses)
         oppai.ezpp_set_accuracy_percent(ez, self.accuracy)
 
-        if self.submission is not None and \
-           self.ranked and self.submitted:
+        if self.submission is not None and self.ranked and self.submitted:
             self.pp = self.submission['pp']
         else:
             self.pp = oppai.ezpp_pp(ez)
@@ -293,7 +290,7 @@ class Score:
     def construct_title(self, options):
         if self.mods:
             modstring = ''.join(string for mod, string in MODS.items()
-                            if mod in self.mods)
+                                if mod in self.mods)
             base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*)"
         else:
             base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*)"
@@ -331,8 +328,7 @@ class Score:
             segments.append(pp_text)
 
         if options.show_ur and self.ur is not None:
-            dt = Mod.DoubleTime in self.mods or \
-                 Mod.Nightcore in self.mods
+            dt = Mod.DoubleTime in self.mods or Mod.Nightcore in self.mods
             if dt:
                 segments.append(f"{self.ur:.2f} cv.UR")
             else:
@@ -399,11 +395,10 @@ def main():
 
     options = TitleOptions(args=args)
 
-    mtime = lambda path: path.stat().st_mtime
     replays = (OSU_PATH / 'Replays').glob('*.osr')
     screenshots = (OSU_PATH / 'Screenshots').glob('*.jpg')
-    replay_path = max(replays, key=mtime)
-    screenshot_path = max(screenshots, key=mtime)
+    replay_path = max(replays, key=lambda path: path.stat().st_mtime)
+    screenshot_path = max(screenshots, key=lambda path: path.stat().st_mtime)
 
     score = Score(replay_path)
     title = score.construct_title(options)
@@ -450,12 +445,12 @@ def main():
         elif action == 's':
             try:
                 sliderbreaks = int(input("Sliderbreaks: "))
-                options.sliderbreaks = sliderbreaks
-                score.calculate_statistics()
-                title = score.construct_title(options)
-                print(title)
-            except:
+            except ValueError:
                 continue
+            options.sliderbreaks = sliderbreaks
+            score.calculate_statistics()
+            title = score.construct_title(options)
+            print(title)
         elif action == 'c':
             pyperclip.copy(title)
             print(color("Title copied to clipboard!", fg='green'))
