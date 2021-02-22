@@ -91,6 +91,7 @@ PP_SIZE = 151
 STARS_SIZE = 77
 USERNAME_MIN_SIZE = 0
 USERNAME_MAX_SIZE = 77
+USERNAME_MAX_WIDTH = 400
 COMBO_SIZE = 82
 RANKS_SIZE = 50
 TITLE_MIN_SIZE = 30
@@ -295,6 +296,15 @@ def render_pfp(score):
     return ImageRenderable(cropped),
 
 
+@render
+def render_username(score):
+    size = TextRenderable.fit_size(score.player,
+                                   USERNAME_MIN_SIZE,
+                                   USERNAME_MAX_SIZE,
+                                   USERNAME_MAX_WIDTH)
+    return TextRenderable(score.player, size, WHITE),
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -336,6 +346,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_pp(score, layers, PP_POSITION)
     render_stars(score, layers, STARS_POSITION)
     render_pfp(score, layers, PFP_POSITION)
+    render_username(score, layers, USERNAME_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
