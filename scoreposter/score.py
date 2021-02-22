@@ -115,7 +115,7 @@ class Score:
         data = utils.request_osu_api('get_user', parameters,
                                      utils.OsuAPIVersion.V1)[0]
         self.user_id = int(data['user_id'])
-    
+
     def get_user(self):
         self.user = utils.request_osu_api(f'users/{self.user_id}/osu')
 
@@ -222,7 +222,7 @@ class Score:
                 if self.matches_score(score):
                     self.ranking = rank
                     break
-    
+
     def get_rank(self):
         total_hits = sum(self.hits)
         ratio = self.hits[0]/total_hits

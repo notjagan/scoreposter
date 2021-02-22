@@ -49,7 +49,7 @@ class Position:
                 self.x = int(1920/2)
         else:
             self.x = x
-        
+
         if isinstance(y, Anchor):
             if y is Anchor.TOP:
                 self.y = 0
@@ -59,13 +59,13 @@ class Position:
                 self.y = int(1080/2)
         else:
             self.y = y
-        
+
         self.x_anchor = x_anchor
         self.y_anchor = y_anchor
         self.width = 0
         self.height = 0
         self.offset = 0
-    
+
     def left(self):
         if self.x_anchor is Anchor.LEFT:
             return self.x + self.offset
@@ -73,7 +73,7 @@ class Position:
             return self.x - self.width + self.offset
         else:
             return int(self.x - self.width/2) + self.offset
-        
+
     def top(self):
         if self.y_anchor is Anchor.TOP:
             return self.y
@@ -81,7 +81,7 @@ class Position:
             return self.y - self.height
         else:
             return int(self.y - self.height/2)
-        
+
 
 RANK_LETTER_POSITION = Position(Anchor.CENTER, 411, Anchor.CENTER, Anchor.BOTTOM)
 ACCURACY_POSITION = Position(Anchor.CENTER, 554, Anchor.CENTER, Anchor.TOP)
@@ -129,10 +129,10 @@ DARK_GRAY = '#414141ff'
 class Renderable:
     def width(self):
         pass
-    
+
     def height(self):
         pass
-    
+
     def render(self, pos):
         return ()
 
@@ -140,13 +140,13 @@ class Renderable:
 class ImageRenderable(Renderable):
     def __init__(self, image):
         self.image = image
-    
+
     def width(self):
         return self.image.shape[1]
-    
+
     def height(self):
         return self.image.shape[0]
-    
+
     def render(self, pos):
         left, top = pos.left(), pos.top()
         h, w = self.image.shape[:2]
@@ -164,28 +164,28 @@ class TextRenderable(Renderable):
             if width <= max_width:
                 return size
         raise OverflowError()
-        
+
     def __init__(self, text, size, color):
         self.text = text
         self.font = ImageFont.truetype(str(FONT_PATH), size)
         self.color = color
-    
+
     def width(self):
         return self.font.getmask(self.text).getbbox()[2]
-    
+
     def height(self):
         return self.font.getmask(self.text).getbbox()[3]
-    
+
     def _offset(self):
         correction_factor = 1/6
         ascent, descent = self.font.getmetrics()
         return -correction_factor*(ascent - descent)/2
-    
+
     def render(self, pos):
         left = pos.left()
         image = Image.new('RGBA', (1920, 1080), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
-        
+
         y = pos.y
         if pos.y_anchor is Anchor.TOP:
             anchor = 'lt'
@@ -194,7 +194,7 @@ class TextRenderable(Renderable):
         else:
             anchor = 'lm'
             y += self._offset()
-        
+
         draw.text((left, y), self.text, fill=self.color, anchor=anchor, font=self.font)
         layer = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
         return layer,
@@ -218,7 +218,7 @@ class TextShadowRenderable(TextRenderable):
         self.text_renderable = TextRenderable(text, size, color)
         self.options = shadow_options
         self.shadow_renderable = TextRenderable(text, size, self.options.color)
-    
+
     def render(self, pos):
         shadow_pos = deepcopy(pos)
         shadow_pos.offset -= self.options.distance*np.cos(self.options.angle)
@@ -226,7 +226,7 @@ class TextShadowRenderable(TextRenderable):
         shadow_layer, = self.shadow_renderable.render(shadow_pos)
         shadow_layer = (shadow_layer.astype(np.float) * self.options.opacity/255).astype(np.uint8)
         shadow_layer = cv2.blur(shadow_layer, (self.options.size, self.options.size))
-        
+
         text_layer, = self.text_renderable.render(pos)
         return shadow_layer, text_layer
 
@@ -234,7 +234,7 @@ class TextShadowRenderable(TextRenderable):
 class SpaceRenderable(Renderable):
     def __init__(self, w):
         self.w = w
-    
+
     def width(self):
         return self.w
 
@@ -308,7 +308,7 @@ def render_pfp(score):
     image = download_image(score.user['avatar_url'])
     if image.shape[2] == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
-    
+
     mask = rounded_rectangle_mask(PFP_LENGTH, PFP_RADIUS)
     cropped = mask*cv2.resize(image, (PFP_LENGTH, PFP_LENGTH))
     return ImageRenderable(cropped),
@@ -431,7 +431,7 @@ def crop_background(image):
         return resized[int(np.floor(h/2) - 1080/2):int(np.ceil(h/2) + 1080/2)]
 
 
-def render_results(score, options, output_path=Path('output/results.png')):   
+def render_results(score, options, output_path=Path('output/results.png')):
     template_dir = ASSETS_PATH / 'templates'
     if score.misses != 0:
         if options.sliderbreaks != 0:
@@ -442,7 +442,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
         template_path = template_dir / 'sb.png'
     else:
         template_path = template_dir / 'fc.png'
-    
+
     background = crop_background(cv2.imread(str(score.bg_path), cv2.IMREAD_COLOR))
     template = cv2.imread(str(template_path), cv2.IMREAD_UNCHANGED)
     layers = [background, template]
