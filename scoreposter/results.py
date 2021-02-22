@@ -141,3 +141,34 @@ class TextRenderable(Renderable):
         draw.text((left, y), self.text, fill=self.color, anchor=anchor, font=self.font)
         layer = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
         return [layer]
+
+
+class ShadowOptions:
+    def __init__(self, color, opacity, angle, distance, size):
+        self.color = color
+        self.opacity = opacity
+        self.angle = angle
+        self.distance = distance
+        self.size = size
+
+
+DEFAULT_SHADOW = ShadowOptions('#000000', 90, np.radians(135), 20, 5)
+
+
+class TextShadowRenderable(TextRenderable):
+    def __init__(self, text, size, color, shadow_options=DEFAULT_SHADOW):
+        super().__init__(text, size, color)
+        self.text_renderable = TextRenderable(text, size, color)
+        self.options = shadow_options
+        self.shadow_renderable = TextRenderable(text, size, self.options.color)
+    
+    def render(self, pos):
+        shadow_pos = deepcopy(pos)
+        shadow_pos.offset -= self.options.distance*np.cos(self.options.angle)
+        shadow_pos.y += self.options.distance*np.sin(self.options.angle)
+        shadow_layer, = self.shadow_renderable.render(shadow_pos)
+        shadow_layer = (shadow_layer.astype(np.float) * self.options.opacity/255).astype(np.uint8)
+        shadow_layer = cv2.blur(shadow_layer, (self.options.size, self.options.size))
+        
+        text_layer, = self.text_renderable.render(pos)
+        return [shadow_layer, text_layer]
