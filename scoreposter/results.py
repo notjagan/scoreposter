@@ -180,3 +180,15 @@ class SpaceRenderable(Renderable):
     
     def width(self):
         return self.w
+
+
+def render_chain(renderables, position):
+    width = sum(r.width() for r in renderables)
+    pos = deepcopy(position)
+    pos.width = width
+    layers = []
+    for renderable in renderables:
+        pos.height = renderable.height()
+        layers.extend(renderable.render(pos))
+        pos.offset += renderable.width()
+    return layers
