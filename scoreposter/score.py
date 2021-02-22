@@ -38,6 +38,7 @@ class Score:
         self.process_replay()
         self.process_beatmap()
         self.get_id()
+        self.get_user()
         self.get_mods()
         self.calculate_accuracy()
         self.find_submission()
@@ -114,6 +115,9 @@ class Score:
         data = utils.request_osu_api('get_user', parameters,
                                      utils.OsuAPIVersion.V1)[0]
         self.user_id = int(data['user_id'])
+    
+    def get_user(self):
+        self.user = utils.request_osu_api(f'users/{self.user_id}/osu')
 
     def get_mods(self):
         self.mods = {mod for mod in Mod
