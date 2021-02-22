@@ -131,12 +131,12 @@ class Score:
 
     def calculate_accuracy(self):
         weights = [300/300, 100/300, 50/300, 0/300]
-        hits = [self.replay.number_300s,
-                self.replay.number_100s,
-                self.replay.number_50s,
-                self.replay.misses]
-        weighted_sum = sum(hit * weight for hit, weight in zip(hits, weights))
-        self.accuracy = weighted_sum / sum(hits) * 100
+        self.hits = [self.replay.number_300s,
+                     self.replay.number_100s,
+                     self.replay.number_50s,
+                     self.replay.misses]
+        weighted_sum = sum(hit * weight for hit, weight in zip(self.hits, weights))
+        self.accuracy = weighted_sum / sum(self.hits) * 100
 
     def matches_score(self, score):
         stats = score['statistics']
