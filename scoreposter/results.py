@@ -13,8 +13,7 @@ from osrparse.enums import Mod
 from PIL import Image, ImageDraw, ImageFont
 from score import Rank, Score
 from title import TitleOptions
-import utils
-
+from utils import MODS
 
 ASSETS_PATH = Path('../assets')
 FONT_PATH = ASSETS_PATH / 'TruenoRg.otf'
@@ -369,7 +368,7 @@ def render_mods(score):
     overlap = SpaceRenderable(-MOD_OVERLAP)
     renderables = []
     for mod in score.mods:
-        image_path = (ASSETS_PATH / 'mods' / utils.MODS[mod]).with_suffix('.png')
+        image_path = (ASSETS_PATH / 'mods' / MODS[mod]).with_suffix('.png')
         image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
         renderables.append(ImageRenderable(image))
         renderables.append(overlap)
