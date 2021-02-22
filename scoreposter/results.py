@@ -116,6 +116,8 @@ FLAG_HEIGHT = 30
 RANKS_SPACE_1 = 15
 RANKS_SPACE_2 = 5
 MOD_OVERLAP = 22
+HITS_SPACE_1 = 13
+HITS_SPACE_2 = 33
 
 WHITE = '#ffffffff'
 BLACK = '#ffffffff'
@@ -374,6 +376,32 @@ def render_mods(score):
     return tuple(renderables[:-1])
 
 
+@render
+def render_hits(score):
+    small_space = SpaceRenderable(HITS_SPACE_1)
+    large_space = SpaceRenderable(HITS_SPACE_2)
+    path_300 = ASSETS_PATH / 'hits' / '300.png'
+    path_100 = ASSETS_PATH / 'hits' / '100.png'
+    path_50 = ASSETS_PATH / 'hits' / '50.png'
+    image_300 = cv2.imread(str(path_300), cv2.IMREAD_UNCHANGED)
+    image_100 = cv2.imread(str(path_100), cv2.IMREAD_UNCHANGED)
+    image_50 = cv2.imread(str(path_50), cv2.IMREAD_UNCHANGED)
+
+    return (
+        TextRenderable(str(score.hits[0]), HITS_SIZE, WHITE),
+        small_space,
+        ImageRenderable(image_300),
+        large_space,
+        TextRenderable(str(score.hits[1]), HITS_SIZE, WHITE),
+        small_space,
+        ImageRenderable(image_100),
+        large_space,
+        TextRenderable(str(score.hits[2]), HITS_SIZE, WHITE),
+        small_space,
+        ImageRenderable(image_50)
+    )
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -420,6 +448,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_ranks(score, layers, RANKS_POSITION)
     render_title(score, layers, TITLE_POSITION)
     render_mods(score, layers, MODS_POSITION)
+    render_hits(score, layers, HITS_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
