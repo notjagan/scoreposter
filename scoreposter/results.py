@@ -305,6 +305,11 @@ def render_username(score):
     return TextRenderable(score.player, size, WHITE),
 
 
+@render
+def render_combo(score):
+    return TextRenderable(f'{score.combo}×', COMBO_SIZE, DARK_GRAY),
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -347,6 +352,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_stars(score, layers, STARS_POSITION)
     render_pfp(score, layers, PFP_POSITION)
     render_username(score, layers, USERNAME_POSITION)
+    render_combo(score, layers, COMBO_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
