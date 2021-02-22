@@ -126,6 +126,7 @@ DARK_GRAY = '#414141ff'
 
 
 class Renderable:
+
     def width(self):
         pass
 
@@ -137,6 +138,7 @@ class Renderable:
 
 
 class ImageRenderable(Renderable):
+
     def __init__(self, image):
         self.image = image
 
@@ -155,6 +157,7 @@ class ImageRenderable(Renderable):
 
 
 class TextRenderable(Renderable):
+
     @staticmethod
     def fit_size(text, min_size, max_size, max_width):
         for size in range(max_size, min_size - 1, -1):
@@ -200,6 +203,7 @@ class TextRenderable(Renderable):
 
 
 class ShadowOptions:
+
     def __init__(self, color, opacity, angle, distance, size):
         self.color = color
         self.opacity = opacity
@@ -212,6 +216,7 @@ DEFAULT_SHADOW = ShadowOptions('#000000', 90, np.radians(135), 20, 5)
 
 
 class TextShadowRenderable(TextRenderable):
+
     def __init__(self, text, size, color, shadow_options=DEFAULT_SHADOW):
         super().__init__(text, size, color)
         self.text_renderable = TextRenderable(text, size, color)
@@ -231,6 +236,7 @@ class TextShadowRenderable(TextRenderable):
 
 
 class SpaceRenderable(Renderable):
+
     def __init__(self, w):
         self.w = w
 
