@@ -1,6 +1,7 @@
 from copy import deepcopy
 from enum import Enum, auto
 from functools import reduce
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -9,6 +10,10 @@ from osrparse.enums import Mod
 from PIL import Image, ImageDraw, ImageFont
 from score import Rank, Score
 import utils
+
+
+ASSETS_PATH = Path('..') / 'assets'
+FONT_PATH = ASSETS_PATH / 'TruenoRg.otf'
 
 
 class Anchor(Enum):
@@ -90,4 +95,49 @@ class ImageRenderable(Renderable):
         h, w = self.image.shape[:2]
         layer = np.zeros((1080, 1920, 4))
         layer[top:top+h, left:left+w] = self.image
+        return [layer]
+
+
+class TextRenderable(Renderable):
+    @staticmethod
+    def fit_size(text, min_size, max_size, max_width):
+        for size in range(max_size, min_size - 1, -1):
+            font = ImageFont.truetype(FONT_PATH, size)
+            width = font.getmask(text).getbbox()[2]
+            if width <= max_width:
+                return size
+        raise OverflowError()
+        
+    def __init__(self, text, size, color):
+        self.text = text
+        self.font = ImageFont.truetype(FONT_PATH, size)
+        self.color = color
+    
+    def width(self):
+        return self.font.getmask(self.text).getbbox()[2]
+    
+    def height(self):
+        return self.font.getmask(self.text).getbbox()[3]
+    
+    def _offset(self):
+        correction_factor = 1/6
+        ascent, descent = self.font.getmetrics()
+        return -correction_factor*(ascent - descent)/2
+    
+    def render(self, pos):
+        left = pos.left()
+        image = Image.new('RGBA', (1920, 1080), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        
+        y = pos.y
+        if pos.y_anchor is Anchor.TOP:
+            anchor = 'lt'
+        elif pos.y_anchor is Anchor.BOTTOM:
+            anchor = 'ls'
+        else:
+            anchor = 'lm'
+            y += self._offset()
+        
+        draw.text((left, y), self.text, fill=self.color, anchor=anchor, font=self.font)
+        layer = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
         return [layer]
