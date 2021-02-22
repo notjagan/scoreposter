@@ -172,3 +172,11 @@ class TextShadowRenderable(TextRenderable):
         
         text_layer, = self.text_renderable.render(pos)
         return [shadow_layer, text_layer]
+
+
+class SpaceRenderable(Renderable):
+    def __init__(self, w):
+        self.w = w
+    
+    def width(self):
+        return self.w
