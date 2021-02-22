@@ -115,6 +115,7 @@ FLAG_WIDTH = 45
 FLAG_HEIGHT = 30
 RANKS_SPACE_1 = 15
 RANKS_SPACE_2 = 5
+MOD_OVERLAP = 22
 
 WHITE = '#ffffffff'
 BLACK = '#ffffffff'
@@ -361,6 +362,18 @@ def render_title(score):
         return TextRenderable(score.title, size, WHITE),
 
 
+@render
+def render_mods(score):
+    overlap = SpaceRenderable(-MOD_OVERLAP)
+    renderables = []
+    for mod in score.mods:
+        image_path = (ASSETS_PATH / 'mods' / utils.MODS[mod]).with_suffix('.png')
+        image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+        renderables.append(ImageRenderable(image))
+        renderables.append(overlap)
+    return tuple(renderables[:-1])
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -406,6 +419,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_combo(score, layers, COMBO_POSITION)
     render_ranks(score, layers, RANKS_POSITION)
     render_title(score, layers, TITLE_POSITION)
+    render_mods(score, layers, MODS_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
