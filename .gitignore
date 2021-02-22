@@ -4,3 +4,4 @@ config.json
 osu_db_tools/
 __pycache__/
 .vscode/
+.pylintrc
