@@ -6,8 +6,8 @@ import webbrowser
 import pyperclip
 import utils
 from colors import color
+from post import PostOptions
 from score import Score
-from title import TitleOptions, construct_title
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
@@ -29,7 +29,14 @@ if args.refresh:
     print('Database refreshed.')
     exit()
 
-options = TitleOptions(args=args)
+options = PostOptions(
+    args.sliderbreaks,
+    args.show_pp,
+    args.show_fc_pp,
+    args.show_combo,
+    args.show_ur,
+    args.message
+)
 
 replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
 screenshots = (utils.OSU_PATH / 'Screenshots').glob('*.jpg')
@@ -37,7 +44,7 @@ replay_path = max(replays, key=lambda path: path.stat().st_mtime)
 screenshot_path = max(screenshots, key=lambda path: path.stat().st_mtime)
 
 score = Score(replay_path)
-title = construct_title(score, options)
+title = score.construct_title(options)
 print(title)
 
 actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 't', 'q']

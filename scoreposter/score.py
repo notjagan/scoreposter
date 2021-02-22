@@ -244,3 +244,57 @@ class Score:
             self.rank = Rank.C
         else:
             self.rank = Rank.D
+
+    def construct_title(self, options):
+        if self.mods:
+            modstring = ''.join(string for mod, string in MODS.items()
+                            if mod in self.mods)
+            base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*)"
+        else:
+            base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*)"
+
+        fc = self.misses == 0 and options.sliderbreaks == 0
+
+        if self.accuracy == 100:
+            base += " SS"
+        else:
+            base += f" {self.accuracy:.2f}%"
+            if self.misses != 0:
+                base += f" {self.misses}xMiss"
+            if options.sliderbreaks != 0:
+                base += f" {options.sliderbreaks}xSB"
+            if options.show_combo or not fc:
+                base += f" {self.combo}/{self.max_combo}x"
+            if fc:
+                base += " FC"
+
+        if self.ranking is not None:
+            base += f" #{self.ranking}"
+        if self.loved:
+            base += " LOVED"
+
+        segments = [self.player, base]
+
+        if options.show_pp:
+            pp_text = f"{self.pp:.0f}pp"
+            if not self.ranked:
+                pp_text += " if ranked"
+            elif not self.submitted:
+                pp_text += " if submitted"
+            if options.show_fc_pp and not fc:
+                pp_text += f" ({self.fcpp:.0f}pp for FC)"
+            segments.append(pp_text)
+
+        if options.show_ur and self.ur is not None:
+            dt = Mod.DoubleTime in self.mods or \
+                 Mod.Nightcore in self.mods
+            if dt:
+                segments.append(f"{self.ur:.2f} cv.UR")
+            else:
+                segments.append(f"{self.ur:.2f} UR")
+
+        if options.message is not None:
+            segments.append(options.message)
+
+        title = ' | '.join(segments)
+        return title
