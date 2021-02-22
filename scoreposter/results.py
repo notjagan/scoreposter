@@ -74,7 +74,7 @@ class Position:
         
 
 RANK_LETTER_POSITION = Position(Anchor.CENTER, 411, Anchor.CENTER, Anchor.BOTTOM)
-ACC_POSITION = Position(Anchor.CENTER, 554, Anchor.CENTER, Anchor.TOP)
+ACCURACY_POSITION = Position(Anchor.CENTER, 554, Anchor.CENTER, Anchor.TOP)
 PP_POSITION = Position(1443, 176, Anchor.CENTER, Anchor.TOP)
 STARS_POSITION = Position(282, 672, Anchor.RIGHT, Anchor.BOTTOM)
 PFP_POSITION = Position(102, 138, Anchor.LEFT, Anchor.TOP)
@@ -85,6 +85,26 @@ TITLE_POSITION = Position(Anchor.CENTER, 494, Anchor.CENTER, Anchor.BOTTOM)
 MODS_POSITION = Position(1582, 377, Anchor.CENTER, Anchor.CENTER)
 HITS_POSITION = Position(Anchor.CENTER, 772, Anchor.CENTER, Anchor.CENTER)
 UR_POSITION = Position(Anchor.CENTER, 863, Anchor.CENTER, Anchor.BOTTOM)
+
+ACCURACY_SIZE = 209
+PP_SIZE = 151
+STARS_SIZE = 77
+USERNAME_MIN_SIZE = 0
+USERNAME_MAX_SIZE = 77
+COMBO_SIZE = 82
+RANKS_SIZE = 50
+TITLE_MIN_SIZE = 30
+TITLE_MAX_SIZE = 50
+HITS_SIZE = 42
+UR_SIZE = 42
+PFP_LENGTH = 186
+PFP_RADIUS = 20
+
+WHITE = '#ffffffff'
+BLACK = '#ffffffff'
+GOLD = '#f2d469ff'
+LIGHT_GRAY = '#545454ff'
+DARK_GRAY = '#414141ff'
 
 
 class Renderable:
@@ -120,7 +140,7 @@ class TextRenderable(Renderable):
     @staticmethod
     def fit_size(text, min_size, max_size, max_width):
         for size in range(max_size, min_size - 1, -1):
-            font = ImageFont.truetype(FONT_PATH, size)
+            font = ImageFont.truetype(str(FONT_PATH), size)
             width = font.getmask(text).getbbox()[2]
             if width <= max_width:
                 return size
@@ -128,7 +148,7 @@ class TextRenderable(Renderable):
         
     def __init__(self, text, size, color):
         self.text = text
-        self.font = ImageFont.truetype(FONT_PATH, size)
+        self.font = ImageFont.truetype(str(FONT_PATH), size)
         self.color = color
     
     def width(self):
@@ -228,6 +248,13 @@ def render_rank_letter(score):
     return ImageRenderable(image),
 
 
+@render
+def render_accuracy(score):
+    return TextShadowRenderable(f'{score.accuracy:.2f}%',
+                                ACCURACY_SIZE,
+                                score.rank.value + 'ff'),
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -265,6 +292,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     layers = [background, template]
 
     render_rank_letter(score, layers, RANK_LETTER_POSITION)
+    render_accuracy(score, layers, ACCURACY_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
