@@ -1,7 +1,10 @@
+#!/usr/bin/python3
+
 from copy import deepcopy
 from enum import Enum, auto
 from functools import reduce
 from pathlib import Path
+from sys import argv
 
 import cv2
 import numpy as np
@@ -9,6 +12,7 @@ import requests
 from osrparse.enums import Mod
 from PIL import Image, ImageDraw, ImageFont
 from score import Rank, Score
+from title import TitleOptions
 import utils
 
 
@@ -206,7 +210,7 @@ def crop_background(image):
         ratio = 1080/height
         resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
         w = resized.shape[1]
-        return resized[:, int(np.floor(w/2) - 1920/2):int(np.ceil(w/2) - 1920/2)]
+        return resized[:, int(np.floor(w/2) - 1920/2):int(np.ceil(w/2) + 1920/2)]
     else:
         ratio = 1920/width
         resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
@@ -226,9 +230,16 @@ def render_results(score, options, output_path=Path('output') / 'results.png'):
     else:
         template_path = template_dir / 'fc.png'
     
-    background = crop_background(cv2.imread(str(score.bg_path)))
-    template = cv2.imread(template_path, cv2.IMREAD_UNCHANGED)
+    background = crop_background(cv2.imread(str(score.bg_path), cv2.IMREAD_COLOR))
+    template = cv2.imread(str(template_path), cv2.IMREAD_UNCHANGED)
     layers = [background, template]
 
     flattened = reduce(layer_images, layers)
-    cv2.imwrite(output_path, flattened)
+    cv2.imwrite(str(output_path), flattened)
+
+
+if __name__ == "__main__":
+    replay_path = argv[1]
+    score = Score(replay_path)
+    options = TitleOptions()
+    render_results(score, options)
