@@ -4,7 +4,6 @@ from copy import deepcopy
 from enum import Enum, auto
 from functools import reduce
 from pathlib import Path
-from sys import argv
 
 import cv2
 import numpy as np
@@ -12,7 +11,6 @@ import requests
 from osrparse.enums import Mod
 from PIL import Image, ImageDraw, ImageFont
 from score import Rank, Score
-from title import TitleOptions
 from utils import MODS
 
 ASSETS_PATH = Path('../assets')
@@ -94,6 +92,8 @@ TITLE_POSITION = Position(Anchor.CENTER, 494, Anchor.CENTER, Anchor.BOTTOM)
 MODS_POSITION = Position(1582, 377, Anchor.CENTER, Anchor.CENTER)
 HITS_POSITION = Position(Anchor.CENTER, 772, Anchor.CENTER, Anchor.CENTER)
 UR_POSITION = Position(Anchor.CENTER, 863, Anchor.CENTER, Anchor.BOTTOM)
+MISSES_POSITION = Position(1705, 867, Anchor.RIGHT, Anchor.CENTER)
+SB_POSITION = Position(1660, 867, Anchor.RIGHT, Anchor.CENTER)
 
 ACCURACY_SIZE = 209
 PP_SIZE = 151
@@ -108,6 +108,8 @@ TITLE_MAX_SIZE = 50
 TITLE_MAX_WIDTH = 1665
 HITS_SIZE = 42
 UR_SIZE = 42
+MISS_SIZE = 100
+SB_SIZE = 100
 PFP_LENGTH = 186
 PFP_RADIUS = 20
 FLAG_WIDTH = 45
@@ -123,6 +125,7 @@ BLACK = '#ffffffff'
 GOLD = '#f2d469ff'
 LIGHT_GRAY = '#545454ff'
 DARK_GRAY = '#414141ff'
+RED = '#e35353ff'
 
 
 class Renderable:
@@ -416,6 +419,22 @@ def render_ur(score):
     return TextRenderable(text, UR_SIZE, GOLD),
 
 
+@render
+def render_misses(score):
+    if score.misses == 0:
+        return ()
+    else:
+        return TextRenderable(str(score.misses), MISS_SIZE, RED),
+
+
+@render
+def render_sliderbreaks(options):
+    if options.sliderbreaks == 0:
+        return ()
+    else:
+        return TextRenderable(str(options.sliderbreaks), SB_SIZE, WHITE),
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -465,12 +484,26 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_hits(score, layers, HITS_POSITION)
     render_ur(score, layers, UR_POSITION)
 
+    miss_pos = deepcopy(MISSES_POSITION)
+    if options.sliderbreaks != 0:
+        miss_pos.x = SB_POSITION.x
+    render_misses(score, layers, miss_pos)
+
+    sb_pos = deepcopy(SB_POSITION)
+    if score.misses != 0:
+        sb_pos.y = 758
+    render_sliderbreaks(options, layers, sb_pos)
+
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
 
 
 if __name__ == "__main__":
+    from sys import argv
+
+    from post import PostOptions
+
     replay_path = argv[1]
     score = Score(replay_path)
-    options = TitleOptions()
+    options = PostOptions()
     render_results(score, options)
