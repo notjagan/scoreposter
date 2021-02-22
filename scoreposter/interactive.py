@@ -6,7 +6,7 @@ import webbrowser
 import pyperclip
 import utils
 from colors import color
-from post import PostOptions
+from post import Post, PostOptions
 from score import Score
 
 parser = argparse.ArgumentParser()
@@ -44,10 +44,10 @@ replay_path = max(replays, key=lambda path: path.stat().st_mtime)
 screenshot_path = max(screenshots, key=lambda path: path.stat().st_mtime)
 
 score = Score(replay_path)
-title = score.construct_title(options)
-print(title)
+post = Post(score, options)
+print(title := post.title)
 
-actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 't', 'q']
+actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 'q']
 action_text = "/".join(actions)
 action = ''
 while action != 'q':
@@ -56,14 +56,14 @@ while action != 'q':
         action = input(f"Action ({action_text}): ").lower()
 
     if action == 'p':
-        utils.subreddit.submit_image(title, screenshot_path)
+        post.submit()
+        print(color("Post submitted!", fg='green'))
     elif action == 'm':
         message = input("Message: ")
         if message == '':
             message = None
         options.message = message
-        title = construct_title(score, options)
-        print(title)
+        print(title := post.title)
     elif action == 'o':
         to_toggle = input("Options (p/f/c/u): ")
         if 'p' in to_toggle:
@@ -74,8 +74,7 @@ while action != 'q':
             options.show_combo = not options.show_combo
         if 'u' in to_toggle:
             options.show_ur = not options.show_ur
-        title = construct_title(score, options)
-        print(title)
+        print(title := post.title)
     elif action == 'r':
         print("Checking for submission...")
         score.find_submission()
@@ -92,12 +91,9 @@ while action != 'q':
             continue
         options.sliderbreaks = sliderbreaks
         score.calculate_statistics()
-        title = construct_title(score, options)
-        print(title)
+        print(title := post.title)
     elif action == 'c':
         pyperclip.copy(title)
         print(color("Title copied to clipboard!", fg='green'))
     elif action == 'b':
         webbrowser.open(score.beatmap['url'])
-    elif action == 't':
-        title = input("Title: ")

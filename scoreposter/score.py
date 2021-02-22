@@ -247,8 +247,8 @@ class Score:
 
     def construct_title(self, options):
         if self.mods:
-            modstring = ''.join(string for mod, string in MODS.items()
-                            if mod in self.mods)
+            modstring = ''.join(string for mod, string in utils.MODS.items()
+                                if mod in self.mods)
             base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*)"
         else:
             base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*)"
