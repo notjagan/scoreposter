@@ -1,5 +1,6 @@
 import json
 import shutil
+from enum import Enum, auto
 from functools import reduce
 from re import search
 from tempfile import NamedTemporaryFile
@@ -12,6 +13,17 @@ from colors import color
 from osrparse import parse_replay_file
 from osrparse.enums import Mod
 from slider.beatmap import Beatmap
+
+
+class Rank(Enum):
+    SS_PLUS = '#cdd0c8'
+    SS = '#f2d469'
+    S_PLUS = '#cdd0c8'
+    S = '#f2d469'
+    A = '#54cc51'
+    B = '#4f79d8'
+    C = '#c55dbf'
+    D = '#cb304d'
 
 
 class Score:
@@ -34,6 +46,7 @@ class Score:
         self.calculate_statistics()
         self.find_ur()
         self.get_ranking()
+        self.get_rank()
 
     def process_replay(self):
         self.player = self.replay.player_name
@@ -216,3 +229,25 @@ class Score:
                 if self.matches_score(score):
                     self.ranking = rank
                     break
+    
+    def get_rank(self):
+        total_hits = sum(self.hits)
+        ratio = self.hits[0]/total_hits
+        if ratio == 1:
+            if Mod.Hidden in self.mods:
+                self.rank = Rank.SS_PLUS
+            else:
+                self.rank = Rank.SS
+        elif ratio > 0.9 and self.hits[2]/total_hits < 0.1 and self.misses == 0:
+            if Mod.Hidden in self.mods:
+                self.rank = Rank.S_PLUS
+            else:
+                self.rank = Rank.S
+        elif ratio > 0.8 and self.misses == 0 or ratio > 0.9:
+            self.rank = Rank.A
+        elif ratio > 0.7 and self.misses == 0 or ratio > 0.8:
+            self.rank = Rank.B
+        elif ratio > 0.6:
+            self.rank = Rank.C
+        else:
+            self.rank = Rank.D
