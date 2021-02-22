@@ -96,6 +96,7 @@ COMBO_SIZE = 82
 RANKS_SIZE = 50
 TITLE_MIN_SIZE = 30
 TITLE_MAX_SIZE = 50
+TITLE_MAX_WIDTH = 1665
 HITS_SIZE = 42
 UR_SIZE = 42
 PFP_LENGTH = 186
@@ -330,6 +331,25 @@ def render_ranks(score):
     )
 
 
+@render
+def render_title(score):
+    try:
+        size = TextRenderable.fit_size(f'{score.title} [{score.difficulty}]',
+                                       TITLE_MIN_SIZE,
+                                       TITLE_MAX_SIZE,
+                                       TITLE_MAX_WIDTH)
+        return (
+            TextRenderable(score.title, size, WHITE),
+            SpaceRenderable(TextRenderable('t', size, WHITE).width()),
+            TextRenderable(f'[{score.difficulty}]', size, GOLD)
+        )
+    except OverflowError:
+        size = TextRenderable.fit_size(score.title,
+                                       0,
+                                       TITLE_MAX_SIZE,
+                                       TITLE_MAX_WIDTH)
+        return TextRenderable(score.title, size, WHITE),
+
 
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
@@ -375,6 +395,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_username(score, layers, USERNAME_POSITION)
     render_combo(score, layers, COMBO_POSITION)
     render_ranks(score, layers, RANKS_POSITION)
+    render_title(score, layers, TITLE_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
