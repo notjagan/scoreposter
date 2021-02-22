@@ -1,4 +1,14 @@
+from copy import deepcopy
 from enum import Enum, auto
+from functools import reduce
+
+import cv2
+import numpy as np
+import requests
+from osrparse.enums import Mod
+from PIL import Image, ImageDraw, ImageFont
+from score import Rank, Score
+import utils
 
 
 class Anchor(Enum):
@@ -63,3 +73,21 @@ class Renderable:
     
     def render(self, pos):
         return []
+
+
+class ImageRenderable(Renderable):
+    def __init__(self, image):
+        self.image = image
+    
+    def width(self):
+        return self.image.shape[1]
+    
+    def height(self):
+        return self.image.shape[0]
+    
+    def render(self, pos):
+        left, top = pos.left(), pos.top()
+        h, w = self.image.shape[:2]
+        layer = np.zeros((1080, 1920, 4))
+        layer[top:top+h, left:left+w] = self.image
+        return [layer]
