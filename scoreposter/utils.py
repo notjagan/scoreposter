@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from collections import OrderedDict
+from enum import Enum
 from pathlib import Path
 
 import praw
@@ -53,6 +54,11 @@ MODS = OrderedDict([(Mod.Easy,          "EZ"),
                     (Mod.Flashlight,    "FL")])
 
 
+class OsuAPIVersion(Enum):
+    V1 = 1
+    V2 = 2
+
+
 def get_osu_headers():
     endpoint = f'{OSU_URL}/oauth/token'
     payload = {
@@ -68,6 +74,19 @@ def get_osu_headers():
 
     headers = {'Authorization': f'{token_type} {access_token}'}
     return headers
+
+
+def request_osu_api(endpoint, parameters={}, version=OsuAPIVersion.V2):
+    if version is OsuAPIVersion.V1:
+        url = f'{V1_URL}/{endpoint}'
+        parameters['k'] = OSU_API_KEY
+        response = requests.get(url, params=parameters)
+    else:
+        url = f'{V2_URL}/{endpoint}'
+        response = requests.get(url, params=parameters, headers=osu_headers)
+
+    data = json.loads(response.text)
+    return data
 
 
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):

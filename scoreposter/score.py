@@ -1,4 +1,3 @@
-import json
 import shutil
 from enum import Enum, auto
 from functools import reduce
@@ -97,9 +96,7 @@ class Score:
             self.title = beatmap.title
             self.difficulty = beatmap.version
 
-            endpoint = f'{utils.V2_URL}/beatmaps/{self.beatmap_id}'
-            response = requests.get(endpoint, headers=utils.osu_headers)
-            data = json.loads(response.text)
+            data = utils.request_osu_api(f'beatmaps/{self.beatmap_id}')
             cover_url = data['beatmapset']['covers']['cover@2x']
 
             response = requests.get(cover_url, stream=True)
@@ -109,15 +106,13 @@ class Score:
                 self.bg_path = image.name
 
     def get_id(self):
-        endpoint = f'{utils.V1_URL}/get_user'
         parameters = {
-            'k':        utils.OSU_API_KEY,
             'u':        self.player,
             'type':     'string'
         }
 
-        response = requests.get(endpoint, params=parameters)
-        data = json.loads(response.text)[0]
+        data = utils.request_osu_api('get_user', parameters,
+                                     utils.OsuAPIVersion.V1)[0]
         self.user_id = int(data['user_id'])
 
     def get_mods(self):
@@ -151,11 +146,9 @@ class Score:
             set(score['mods']) == {utils.MODS[mod] for mod in self.mods}
 
     def find_submission(self):
-        endpoint = f'{utils.V2_URL}/users/{self.user_id}/scores/recent'
+        endpoint = f'users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
-        response = requests.get(endpoint, params=parameters,
-                                headers=utils.osu_headers)
-        data = json.loads(response.text)
+        data = utils.request_osu_api(endpoint, parameters)
         if 'error' in data or len(data) != 1:
             return
 
@@ -172,9 +165,7 @@ class Score:
         if self.submission is not None:
             self.beatmap = self.submission['beatmap']
         else:
-            endpoint = f'{utils.V2_URL}/beatmaps/{self.beatmap_id}'
-            response = requests.get(endpoint, headers=utils.osu_headers)
-            self.beatmap = json.loads(response.text)
+            self.beatmap = utils.request_osu_api(f'beatmaps/{self.beatmap_id}')
 
         status = self.beatmap['status']
         if status == 'ranked' or status == 'approved':
@@ -218,9 +209,7 @@ class Score:
 
     def get_ranking(self):
         if self.ranked or self.loved:
-            endpoint = f'{utils.V2_URL}/beatmaps/{self.beatmap_id}/scores'
-            response = requests.get(endpoint, headers=utils.osu_headers)
-            data = json.loads(response.text)
+            data = utils.request_osu_api(f'beatmaps/{self.beatmap_id}/scores')
             if 'error' in data:
                 return
 
