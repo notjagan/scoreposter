@@ -18,6 +18,16 @@ import utils
 
 ASSETS_PATH = Path('../assets')
 FONT_PATH = ASSETS_PATH / 'TruenoRg.otf'
+RANK_COLORS = {
+    Rank.SS_PLUS:   '#cdd0c8ff',
+    Rank.SS:        '#f2d469ff',
+    Rank.S_PLUS:    '#cdd0c8ff',
+    Rank.S:         '#f2d469ff',
+    Rank.A:         '#54cc51ff',
+    Rank.B:         '#4f79d8ff',
+    Rank.C:         '#c55dbfff',
+    Rank.D:         '#cb304dff'
+}
 
 
 class Anchor(Enum):
@@ -277,7 +287,7 @@ def render_rank_letter(score):
 
 @render
 def render_accuracy(score):
-    return TextShadowRenderable(f'{score.accuracy:.2f}%', ACCURACY_SIZE, score.rank.value + 'ff'),
+    return TextShadowRenderable(f'{score.accuracy:.2f}%', ACCURACY_SIZE, RANK_COLORS[score.rank]),
 
 
 @render

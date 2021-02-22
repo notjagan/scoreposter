@@ -15,14 +15,14 @@ from slider.beatmap import Beatmap
 
 
 class Rank(Enum):
-    SS_PLUS = '#cdd0c8'
-    SS = '#f2d469'
-    S_PLUS = '#cdd0c8'
-    S = '#f2d469'
-    A = '#54cc51'
-    B = '#4f79d8'
-    C = '#c55dbf'
-    D = '#cb304d'
+    SS_PLUS = auto()
+    SS = auto()
+    S_PLUS = auto()
+    S = auto()
+    A = auto()
+    B = auto()
+    C = auto()
+    D = auto()
 
 
 class Score:
