@@ -212,6 +212,15 @@ def render_chain(renderables, position):
     return layers
 
 
+def render(func):
+    def wrapper(layers, position):
+        nonlocal func
+        renderables = func()
+        layers.extend(render_chain(renderables, position))
+
+    return wrapper
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
