@@ -73,6 +73,20 @@ class Position:
             return int(self.y - self.height/2)
         
 
+RANK_LETTER_POSITION = Position(Anchor.CENTER, 411, Anchor.CENTER, Anchor.BOTTOM)
+ACC_POSITION = Position(Anchor.CENTER, 554, Anchor.CENTER, Anchor.TOP)
+PP_POSITION = Position(1443, 176, Anchor.CENTER, Anchor.TOP)
+STARS_POSITION = Position(282, 672, Anchor.RIGHT, Anchor.BOTTOM)
+PFP_POSITION = Position(102, 138, Anchor.LEFT, Anchor.TOP)
+USERNAME_POSITION = Position(324, 232, Anchor.LEFT, Anchor.BOTTOM)
+COMBO_POSITION = Position(445, 960, Anchor.CENTER, Anchor.CENTER)
+RANKS_POSITION = Position(324, 272, Anchor.LEFT, Anchor.CENTER)
+TITLE_POSITION = Position(Anchor.CENTER, 494, Anchor.CENTER, Anchor.BOTTOM)
+MODS_POSITION = Position(1582, 377, Anchor.CENTER, Anchor.CENTER)
+HITS_POSITION = Position(Anchor.CENTER, 772, Anchor.CENTER, Anchor.CENTER)
+UR_POSITION = Position(Anchor.CENTER, 863, Anchor.CENTER, Anchor.BOTTOM)
+
+
 class Renderable:
     def width(self):
         pass
