@@ -100,6 +100,10 @@ HITS_SIZE = 42
 UR_SIZE = 42
 PFP_LENGTH = 186
 PFP_RADIUS = 20
+FLAG_WIDTH = 45
+FLAG_HEIGHT = 30
+RANKS_SPACE_1 = 15
+RANKS_SPACE_2 = 5
 
 WHITE = '#ffffffff'
 BLACK = '#ffffffff'
@@ -310,6 +314,23 @@ def render_combo(score):
     return TextRenderable(f'{score.combo}×', COMBO_SIZE, DARK_GRAY),
 
 
+@render
+def render_ranks(score):
+    global_rank = score.user['statistics']['rank']['global']
+    country_rank = score.user['statistics']['rank']['country']
+    country_code = score.user['country']['code']
+    image = download_image(f'http://osu.ppy.sh/images/flags/{country_code}.png')
+    flag = cv2.resize(image, (FLAG_WIDTH, FLAG_HEIGHT))
+    return (
+        TextRenderable(f'#{global_rank}  (#{country_rank}', RANKS_SIZE, GOLD),
+        SpaceRenderable(RANKS_SPACE_1),
+        ImageRenderable(flag),
+        SpaceRenderable(RANKS_SPACE_2),
+        TextRenderable(')', RANKS_SIZE, GOLD)
+    )
+
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -353,6 +374,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_pfp(score, layers, PFP_POSITION)
     render_username(score, layers, USERNAME_POSITION)
     render_combo(score, layers, COMBO_POSITION)
+    render_ranks(score, layers, RANKS_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
