@@ -258,6 +258,11 @@ def render_pp(score):
     return TextShadowRenderable(f'{score.pp:.0f}pp', PP_SIZE, GOLD),
 
 
+@render
+def render_stars(score):
+    return TextRenderable(f'{score.stars:.2f}', STARS_SIZE, LIGHT_GRAY),
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -297,6 +302,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_rank_letter(score, layers, RANK_LETTER_POSITION)
     render_accuracy(score, layers, ACCURACY_POSITION)
     render_pp(score, layers, PP_POSITION)
+    render_stars(score, layers, STARS_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
