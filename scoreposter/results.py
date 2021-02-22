@@ -402,6 +402,15 @@ def render_hits(score):
     )
 
 
+@render
+def render_ur(score):
+    if Mod.DoubleTime in score.mods or Mod.Nightcore in score.mods:
+        text = f"{score.ur:.2f} cv.UR"
+    else:
+        text = f"{score.ur:.2f} UR"
+    return TextRenderable(text, UR_SIZE, GOLD),
+
+
 def layer_images(image, overlay):
     bgr = overlay[..., :3]
     alpha = overlay[..., 3]/255
@@ -449,6 +458,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_title(score, layers, TITLE_POSITION)
     render_mods(score, layers, MODS_POSITION)
     render_hits(score, layers, HITS_POSITION)
+    render_ur(score, layers, UR_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
