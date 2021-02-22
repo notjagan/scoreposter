@@ -192,3 +192,43 @@ def render_chain(renderables, position):
         layers.extend(renderable.render(pos))
         pos.offset += renderable.width()
     return layers
+
+
+def layer_images(image, overlay):
+    bgr = overlay[..., :3]
+    alpha = overlay[..., 3]/255
+    return bgr*alpha[..., None] + image*(1 - alpha)[..., None]
+
+
+def crop_background(image):
+    height, width, _ = image.shape
+    if width/height >= 1920/1080:
+        ratio = 1080/height
+        resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
+        w = resized.shape[1]
+        return resized[:, int(np.floor(w/2) - 1920/2):int(np.ceil(w/2) - 1920/2)]
+    else:
+        ratio = 1920/width
+        resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
+        h = resized.shape[0]
+        return resized[int(np.floor(h/2) - 1080/2):int(np.ceil(h/2) + 1080/2)]
+
+
+def render_results(score, options, output_path=Path('output') / 'results.png'):   
+    template_dir = ASSETS_PATH / 'templates'
+    if score.misses != 0:
+        if options.sliderbreaks != 0:
+            template_path = template_dir / 'miss+sb.png'
+        else:
+            template_path = template_dir / 'miss.png'
+    elif options.sliderbreaks != 0:
+        template_path = template_dir / 'sb.png'
+    else:
+        template_path = template_dir / 'fc.png'
+    
+    background = crop_background(cv2.imread(str(score.bg_path)))
+    template = cv2.imread(template_path, cv2.IMREAD_UNCHANGED)
+    layers = [background, template]
+
+    flattened = reduce(layer_images, layers)
+    cv2.imwrite(output_path, flattened)
