@@ -232,6 +232,27 @@ def render_chain(renderables, position):
     return layers
 
 
+def rounded_rectangle_mask(length, radius, tol=0.01):
+    x = np.arange(-length/2, length/2, 1, dtype=np.float)
+    y = np.arange(-length/2, length/2, 1, dtype=np.float)
+    x_values, y_values = np.meshgrid(x, y)
+
+    def mask(dim):
+        nonlocal length, radius
+        circles = ((np.abs(dim) - length/2 + radius)/radius)**2
+        rectangle = (np.abs(dim) >= length/2 - radius)
+        return rectangle * circles
+
+    mask = (mask(x_values) + mask(y_values) <= 1 + tol)[..., None]
+    return mask
+
+
+def download_image(url):
+    response = requests.get(url, stream=True)
+    array = np.asarray(bytearray(response.raw.read()), dtype="uint8")
+    return cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
+
+
 def render(func):
     def wrapper(score, layers, position):
         nonlocal func
@@ -261,6 +282,17 @@ def render_pp(score):
 @render
 def render_stars(score):
     return TextRenderable(f'{score.stars:.2f}', STARS_SIZE, LIGHT_GRAY),
+
+
+@render
+def render_pfp(score):
+    image = download_image(score.user['avatar_url'])
+    if image.shape[2] == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    
+    mask = rounded_rectangle_mask(PFP_LENGTH, PFP_RADIUS)
+    cropped = mask*cv2.resize(image, (PFP_LENGTH, PFP_LENGTH))
+    return ImageRenderable(cropped),
 
 
 def layer_images(image, overlay):
@@ -303,6 +335,7 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_accuracy(score, layers, ACCURACY_POSITION)
     render_pp(score, layers, PP_POSITION)
     render_stars(score, layers, STARS_POSITION)
+    render_pfp(score, layers, PFP_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
