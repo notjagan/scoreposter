@@ -95,7 +95,7 @@ class Renderable:
         pass
     
     def render(self, pos):
-        return []
+        return ()
 
 
 class ImageRenderable(Renderable):
@@ -113,7 +113,7 @@ class ImageRenderable(Renderable):
         h, w = self.image.shape[:2]
         layer = np.zeros((1080, 1920, 4))
         layer[top:top+h, left:left+w] = self.image
-        return [layer]
+        return layer,
 
 
 class TextRenderable(Renderable):
@@ -158,7 +158,7 @@ class TextRenderable(Renderable):
         
         draw.text((left, y), self.text, fill=self.color, anchor=anchor, font=self.font)
         layer = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
-        return [layer]
+        return layer,
 
 
 class ShadowOptions:
@@ -189,7 +189,7 @@ class TextShadowRenderable(TextRenderable):
         shadow_layer = cv2.blur(shadow_layer, (self.options.size, self.options.size))
         
         text_layer, = self.text_renderable.render(pos)
-        return [shadow_layer, text_layer]
+        return shadow_layer, text_layer
 
 
 class SpaceRenderable(Renderable):
