@@ -16,7 +16,7 @@ from title import TitleOptions
 import utils
 
 
-ASSETS_PATH = Path('..') / 'assets'
+ASSETS_PATH = Path('../assets')
 FONT_PATH = ASSETS_PATH / 'TruenoRg.otf'
 
 
@@ -213,12 +213,19 @@ def render_chain(renderables, position):
 
 
 def render(func):
-    def wrapper(layers, position):
+    def wrapper(score, layers, position):
         nonlocal func
-        renderables = func()
+        renderables = func(score)
         layers.extend(render_chain(renderables, position))
 
     return wrapper
+
+
+@render
+def render_rank_letter(score):
+    image_path = (ASSETS_PATH / 'ranks' / score.rank.name).with_suffix('.png')
+    image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+    return ImageRenderable(image),
 
 
 def layer_images(image, overlay):
@@ -241,7 +248,7 @@ def crop_background(image):
         return resized[int(np.floor(h/2) - 1080/2):int(np.ceil(h/2) + 1080/2)]
 
 
-def render_results(score, options, output_path=Path('output') / 'results.png'):   
+def render_results(score, options, output_path=Path('output/results.png')):   
     template_dir = ASSETS_PATH / 'templates'
     if score.misses != 0:
         if options.sliderbreaks != 0:
@@ -256,6 +263,8 @@ def render_results(score, options, output_path=Path('output') / 'results.png'):
     background = crop_background(cv2.imread(str(score.bg_path), cv2.IMREAD_COLOR))
     template = cv2.imread(str(template_path), cv2.IMREAD_UNCHANGED)
     layers = [background, template]
+
+    render_rank_letter(score, layers, RANK_LETTER_POSITION)
 
     flattened = reduce(layer_images, layers)
     cv2.imwrite(str(output_path), flattened)
