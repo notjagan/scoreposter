@@ -492,14 +492,15 @@ def render_results(score, options, output_path=Path('output/results.png')):
         render_pp(score, PP_POSITION, layers, 3)
 
     miss_pos = deepcopy(MISSES_POSITION)
-    if score.sliderbreaks != 0:
+    if score.sliderbreaks != 0 and options.show_sliderbreaks:
         miss_pos.x = SB_POSITION.x
     render_misses(score, miss_pos, layers)
 
-    sb_pos = deepcopy(SB_POSITION)
-    if score.misses != 0:
-        sb_pos.y = 758
-    render_sliderbreaks(score, sb_pos, layers)
+    if options.show_sliderbreaks:
+        sb_pos = deepcopy(SB_POSITION)
+        if score.misses != 0:
+            sb_pos.y = 758
+        render_sliderbreaks(score, sb_pos, layers)
 
     flattened = flatten(layers)
     cv2.imwrite(str(output_path), flattened)

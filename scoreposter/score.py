@@ -270,7 +270,7 @@ class Score:
             base += f" {self.accuracy:.2f}%"
             if self.misses != 0:
                 base += f" {self.misses}xMiss"
-            if self.sliderbreaks != 0:
+            if self.sliderbreaks != 0 and options.show_sliderbreaks:
                 base += f" {self.sliderbreaks}xSB"
             if options.show_combo or not fc:
                 base += f" {self.combo}/{self.max_combo}x"
