@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 from enum import Enum, auto
-from functools import reduce
 from pathlib import Path
 
 import cv2
@@ -117,8 +116,11 @@ FLAG_HEIGHT = 30
 RANKS_SPACE_1 = 15
 RANKS_SPACE_2 = 5
 MOD_OVERLAP = 22
+MOD_WIDTH = 88
+MOD_HEIGHT = 62
 HITS_SPACE_1 = 13
 HITS_SPACE_2 = 33
+FG_LAYER = 4
 
 WHITE = '#ffffffff'
 BLACK = '#ffffffff'
@@ -136,8 +138,8 @@ class Renderable:
     def height(self):
         pass
 
-    def render(self, pos):
-        return ()
+    def render(self, *args):
+        pass
 
 
 class ImageRenderable(Renderable):
@@ -151,12 +153,10 @@ class ImageRenderable(Renderable):
     def height(self):
         return self.image.shape[0]
 
-    def render(self, pos):
+    def render(self, pos, layers, i):
         left, top = pos.left(), pos.top()
         h, w = self.image.shape[:2]
-        layer = np.zeros((1080, 1920, 4))
-        layer[top:top+h, left:left+w] = self.image
-        return layer,
+        layers[i, top:top+h, left:left+w] = self.image
 
 
 class TextRenderable(Renderable):
@@ -186,11 +186,8 @@ class TextRenderable(Renderable):
         ascent, descent = self.font.getmetrics()
         return -correction_factor*(ascent - descent)/2
 
-    def render(self, pos):
+    def render(self, pos, layers, i):
         left = pos.left()
-        image = Image.new('RGBA', (1920, 1080), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-
         y = pos.y
         if pos.y_anchor is Anchor.TOP:
             anchor = 'lt'
@@ -200,9 +197,10 @@ class TextRenderable(Renderable):
             anchor = 'lm'
             y += self._offset()
 
+        image = Image.fromarray(cv2.cvtColor(layers[i], cv2.COLOR_BGRA2RGBA))
+        draw = ImageDraw.Draw(image)
         draw.text((left, y), self.text, fill=self.color, anchor=anchor, font=self.font)
-        layer = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
-        return layer,
+        layers[i] = cv2.cvtColor(np.array(image), cv2.COLOR_BGRA2RGBA)
 
 
 class ShadowOptions:
@@ -226,16 +224,16 @@ class TextShadowRenderable(TextRenderable):
         self.options = shadow_options
         self.shadow_renderable = TextRenderable(text, size, self.options.color)
 
-    def render(self, pos):
+    def render(self, pos, layers, i):
         shadow_pos = deepcopy(pos)
         shadow_pos.offset -= self.options.distance*np.cos(self.options.angle)
         shadow_pos.y += self.options.distance*np.sin(self.options.angle)
-        shadow_layer, = self.shadow_renderable.render(shadow_pos)
-        shadow_layer = (shadow_layer.astype(np.float) * self.options.opacity/255).astype(np.uint8)
-        shadow_layer = cv2.blur(shadow_layer, (self.options.size, self.options.size))
-
-        text_layer, = self.text_renderable.render(pos)
-        return shadow_layer, text_layer
+        self.shadow_renderable.render(shadow_pos, layers, i)
+        layers[i] = cv2.blur(
+            (layers[i].astype(np.float) * self.options.opacity/255).astype(np.uint8),
+            (self.options.size, self.options.size)
+        )
+        self.text_renderable.render(pos, layers, FG_LAYER)
 
 
 class SpaceRenderable(Renderable):
@@ -247,16 +245,14 @@ class SpaceRenderable(Renderable):
         return self.w
 
 
-def render_chain(renderables, position):
+def render_chain(renderables, position, layers, i):
     width = sum(r.width() for r in renderables)
     pos = deepcopy(position)
     pos.width = width
-    layers = []
     for renderable in renderables:
         pos.height = renderable.height()
-        layers.extend(renderable.render(pos))
+        renderable.render(pos, layers, i)
         pos.offset += renderable.width()
-    return layers
 
 
 def rounded_rectangle_mask(length, radius, tol=0.01):
@@ -281,10 +277,10 @@ def download_image(url):
 
 
 def render(func):
-    def wrapper(score, layers, position):
+    def wrapper(score, position, layers, i=FG_LAYER):
         nonlocal func
         renderables = func(score)
-        layers.extend(render_chain(renderables, position))
+        render_chain(renderables, position, layers, i)
 
     return wrapper
 
@@ -374,14 +370,16 @@ def render_title(score):
 
 @render
 def render_mods(score):
-    overlap = SpaceRenderable(-MOD_OVERLAP)
-    renderables = []
-    for mod in score.mods:
+    n = len(score.mods)
+    layers = np.zeros((n, MOD_HEIGHT, n*MOD_WIDTH - (n - 1)*MOD_OVERLAP, 4))
+    offset = 0
+    for i, mod in enumerate(score.mods):
         image_path = (ASSETS_PATH / 'mods' / MODS[mod]).with_suffix('.png')
         image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
-        renderables.append(ImageRenderable(image))
-        renderables.append(overlap)
-    return tuple(renderables[:-1])
+        layers[i, :, offset:offset + MOD_WIDTH] = image
+        offset += MOD_WIDTH - MOD_OVERLAP
+    flattened = flatten(layers)
+    return ImageRenderable(flattened),
 
 
 @render
@@ -435,12 +433,6 @@ def render_sliderbreaks(options):
         return TextRenderable(str(options.sliderbreaks), SB_SIZE, WHITE),
 
 
-def layer_images(image, overlay):
-    bgr = overlay[..., :3]
-    alpha = overlay[..., 3]/255
-    return bgr*alpha[..., None] + image*(1 - alpha)[..., None]
-
-
 def crop_background(image):
     height, width, _ = image.shape
     if width/height >= 1920/1080:
@@ -453,6 +445,16 @@ def crop_background(image):
         resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
         h = resized.shape[0]
         return resized[int(np.floor(h/2) - 1080/2):int(np.ceil(h/2) + 1080/2)]
+
+
+def flatten(layers):
+    alpha = layers[..., 3]/255
+    beta = np.roll(1 - alpha, -1, axis=0)
+    beta[-1, ...] = 1
+    coeffs = alpha*np.flipud(np.cumprod(np.flipud(beta), 0))
+    opaque = np.copy(layers)
+    opaque[..., 3] = 255
+    return np.einsum('ijkl,ijk->jkl', opaque, coeffs)
 
 
 def render_results(score, options, output_path=Path('output/results.png')):
@@ -468,33 +470,36 @@ def render_results(score, options, output_path=Path('output/results.png')):
         template_path = template_dir / 'fc.png'
 
     background = crop_background(cv2.imread(str(score.bg_path), cv2.IMREAD_COLOR))
+    background = cv2.cvtColor(background, cv2.COLOR_BGR2BGRA)
     template = cv2.imread(str(template_path), cv2.IMREAD_UNCHANGED)
-    layers = [background, template]
+    layers = np.zeros([5, 1080, 1920, 4], dtype=np.uint8)
+    layers[0] = background
+    layers[1] = template
 
-    render_rank_letter(score, layers, RANK_LETTER_POSITION)
-    render_accuracy(score, layers, ACCURACY_POSITION)
-    render_pp(score, layers, PP_POSITION)
-    render_stars(score, layers, STARS_POSITION)
-    render_pfp(score, layers, PFP_POSITION)
-    render_username(score, layers, USERNAME_POSITION)
-    render_combo(score, layers, COMBO_POSITION)
-    render_ranks(score, layers, RANKS_POSITION)
-    render_title(score, layers, TITLE_POSITION)
-    render_mods(score, layers, MODS_POSITION)
-    render_hits(score, layers, HITS_POSITION)
-    render_ur(score, layers, UR_POSITION)
+    render_rank_letter(score, RANK_LETTER_POSITION, layers)
+    render_accuracy(score, ACCURACY_POSITION, layers, 2)
+    render_pp(score, PP_POSITION, layers, 3)
+    render_stars(score, STARS_POSITION, layers)
+    render_pfp(score, PFP_POSITION, layers)
+    render_username(score, USERNAME_POSITION, layers)
+    render_combo(score, COMBO_POSITION, layers)
+    render_ranks(score, RANKS_POSITION, layers)
+    render_title(score, TITLE_POSITION, layers)
+    render_mods(score, MODS_POSITION, layers)
+    render_hits(score, HITS_POSITION, layers)
+    render_ur(score, UR_POSITION, layers)
 
     miss_pos = deepcopy(MISSES_POSITION)
     if options.sliderbreaks != 0:
         miss_pos.x = SB_POSITION.x
-    render_misses(score, layers, miss_pos)
+    render_misses(score, miss_pos, layers)
 
     sb_pos = deepcopy(SB_POSITION)
     if score.misses != 0:
         sb_pos.y = 758
-    render_sliderbreaks(options, layers, sb_pos)
+    render_sliderbreaks(options, sb_pos, layers)
 
-    flattened = reduce(layer_images, layers)
+    flattened = flatten(layers)
     cv2.imwrite(str(output_path), flattened)
 
 
