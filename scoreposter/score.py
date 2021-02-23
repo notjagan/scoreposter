@@ -12,6 +12,7 @@ from colors import color
 from osrparse import parse_replay_file
 from osrparse.enums import Mod
 from slider.beatmap import Beatmap
+from slider.replay import Replay
 
 
 class Rank(Enum):
@@ -41,6 +42,7 @@ class Score:
         self.get_user()
         self.get_mods()
         self.calculate_accuracy()
+        self.calculate_sliderbreaks()
         self.find_submission()
         self.get_status()
         self.calculate_statistics()
@@ -136,6 +138,13 @@ class Score:
                      self.replay.misses]
         weighted_sum = sum(hit * weight for hit, weight in zip(self.hits, weights))
         self.accuracy = weighted_sum / sum(self.hits) * 100
+
+    def calculate_sliderbreaks(self):
+        replay = Replay.from_path(
+            self.replay_path,
+            beatmap=Beatmap.from_path(self.map_path),
+            retrieve_beatmap=False)
+        self.sliderbreaks = len(replay.hits['slider_breaks'])
 
     def matches_score(self, score):
         stats = score['statistics']
@@ -253,7 +262,7 @@ class Score:
         else:
             base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*)"
 
-        fc = self.misses == 0 and options.sliderbreaks == 0
+        fc = self.misses == 0 and self.sliderbreaks == 0
 
         if self.accuracy == 100:
             base += " SS"
@@ -261,8 +270,8 @@ class Score:
             base += f" {self.accuracy:.2f}%"
             if self.misses != 0:
                 base += f" {self.misses}xMiss"
-            if options.sliderbreaks != 0:
-                base += f" {options.sliderbreaks}xSB"
+            if self.sliderbreaks != 0:
+                base += f" {self.sliderbreaks}xSB"
             if options.show_combo or not fc:
                 base += f" {self.combo}/{self.max_combo}x"
             if fc:

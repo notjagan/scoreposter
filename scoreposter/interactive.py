@@ -10,7 +10,6 @@ from post import Post, PostOptions
 from score import Score
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--sb', dest='sliderbreaks', default=0)
 parser.add_argument('-p', '--no-pp', dest='show_pp',
                     action='store_false')
 parser.add_argument('-f', '--no-fc-pp', dest='show_fc_pp',
@@ -30,7 +29,6 @@ if args.refresh:
     exit()
 
 options = PostOptions(
-    args.sliderbreaks,
     args.show_pp,
     args.show_fc_pp,
     args.show_combo,
@@ -47,7 +45,7 @@ score = Score(replay_path)
 post = Post(score, options)
 print(title := post.title)
 
-actions = ['p', 'm', 'o', 'r', 's', 'c', 'b', 'q']
+actions = ['p', 'm', 'o', 'r', 'c', 'b', 'q']
 action_text = "/".join(actions)
 action = ''
 while action != 'q':
@@ -84,14 +82,6 @@ while action != 'q':
             score.get_ranking()
         else:
             print(color("Submission not found.", fg='red'))
-    elif action == 's':
-        try:
-            sliderbreaks = int(input("Sliderbreaks: "))
-        except ValueError:
-            continue
-        options.sliderbreaks = sliderbreaks
-        score.calculate_statistics()
-        print(title := post.title)
     elif action == 'c':
         pyperclip.copy(title)
         print(color("Title copied to clipboard!", fg='green'))

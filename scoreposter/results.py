@@ -426,11 +426,11 @@ def render_misses(score):
 
 
 @render
-def render_sliderbreaks(options):
-    if options.sliderbreaks == 0:
+def render_sliderbreaks(score):
+    if score.sliderbreaks == 0:
         return ()
     else:
-        return TextRenderable(str(options.sliderbreaks), SB_SIZE, WHITE),
+        return TextRenderable(str(score.sliderbreaks), SB_SIZE, WHITE),
 
 
 def crop_background(image):
@@ -460,11 +460,11 @@ def flatten(layers):
 def render_results(score, options, output_path=Path('output/results.png')):
     template_dir = ASSETS_PATH / 'templates'
     if score.misses != 0:
-        if options.sliderbreaks != 0:
+        if score.sliderbreaks != 0:
             template_path = template_dir / 'miss+sb.png'
         else:
             template_path = template_dir / 'miss.png'
-    elif options.sliderbreaks != 0:
+    elif score.sliderbreaks != 0:
         template_path = template_dir / 'sb.png'
     else:
         template_path = template_dir / 'fc.png'
@@ -490,14 +490,14 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_ur(score, UR_POSITION, layers)
 
     miss_pos = deepcopy(MISSES_POSITION)
-    if options.sliderbreaks != 0:
+    if score.sliderbreaks != 0:
         miss_pos.x = SB_POSITION.x
     render_misses(score, miss_pos, layers)
 
     sb_pos = deepcopy(SB_POSITION)
     if score.misses != 0:
         sb_pos.y = 758
-    render_sliderbreaks(options, sb_pos, layers)
+    render_sliderbreaks(score, sb_pos, layers)
 
     flattened = flatten(layers)
     cv2.imwrite(str(output_path), flattened)
