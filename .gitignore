@@ -1,3 +1,8 @@
-/keys.json
-/cache.db
-/osu_db_tools/
+keys.json
+cache.db
+config.json
+osu_db_tools/
+__pycache__/
+.vscode/
+.pylintrc
+output
