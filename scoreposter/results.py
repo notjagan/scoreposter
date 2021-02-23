@@ -478,7 +478,6 @@ def render_results(score, options, output_path=Path('output/results.png')):
 
     render_rank_letter(score, RANK_LETTER_POSITION, layers)
     render_accuracy(score, ACCURACY_POSITION, layers, 2)
-    render_pp(score, PP_POSITION, layers, 3)
     render_stars(score, STARS_POSITION, layers)
     render_pfp(score, PFP_POSITION, layers)
     render_username(score, USERNAME_POSITION, layers)
@@ -488,6 +487,9 @@ def render_results(score, options, output_path=Path('output/results.png')):
     render_mods(score, MODS_POSITION, layers)
     render_hits(score, HITS_POSITION, layers)
     render_ur(score, UR_POSITION, layers)
+
+    if options.show_pp:
+        render_pp(score, PP_POSITION, layers, 3)
 
     miss_pos = deepcopy(MISSES_POSITION)
     if score.sliderbreaks != 0:
