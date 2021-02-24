@@ -439,12 +439,12 @@ def crop_background(image):
         ratio = 1080/height
         resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
         w = resized.shape[1]
-        return resized[:, int(np.floor(w/2) - 1920/2):int(np.ceil(w/2) + 1920/2)]
+        return resized[:, int(w/2 - 1920/2):int(w/2 + 1920/2)]
     else:
         ratio = 1920/width
         resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
         h = resized.shape[0]
-        return resized[int(np.floor(h/2) - 1080/2):int(np.ceil(h/2) + 1080/2)]
+        return resized[int(h/2 - 1080/2):int(h/2 + 1080/2)]
 
 
 def flatten(layers):
