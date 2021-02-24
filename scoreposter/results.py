@@ -371,6 +371,9 @@ def render_title(score):
 @render
 def render_mods(score):
     n = len(score.mods)
+    if n == 0:
+        return ()
+
     layers = np.zeros((n, MOD_HEIGHT, n*MOD_WIDTH - (n - 1)*MOD_OVERLAP, 4))
     offset = 0
     for i, mod in enumerate(score.mods):
