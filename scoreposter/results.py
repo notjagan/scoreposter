@@ -289,22 +289,22 @@ def render(func):
 def render_rank_letter(score):
     image_path = (ASSETS_PATH / 'ranks' / score.rank.name).with_suffix('.png')
     image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
-    return ImageRenderable(image),
+    return (ImageRenderable(image),)
 
 
 @render
 def render_accuracy(score):
-    return TextShadowRenderable(f'{score.accuracy:.2f}%', ACCURACY_SIZE, RANK_COLORS[score.rank]),
+    return (TextShadowRenderable(f'{score.accuracy:.2f}%', ACCURACY_SIZE, RANK_COLORS[score.rank]),)
 
 
 @render
 def render_pp(score):
-    return TextShadowRenderable(f'{score.pp:.0f}pp', PP_SIZE, GOLD),
+    return (TextShadowRenderable(f'{score.pp:.0f}pp', PP_SIZE, GOLD),)
 
 
 @render
 def render_stars(score):
-    return TextRenderable(f'{score.stars:.2f}', STARS_SIZE, LIGHT_GRAY),
+    return (TextRenderable(f'{score.stars:.2f}', STARS_SIZE, LIGHT_GRAY),)
 
 
 @render
@@ -315,7 +315,7 @@ def render_pfp(score):
 
     mask = rounded_rectangle_mask(PFP_LENGTH, PFP_RADIUS)
     cropped = mask*cv2.resize(image, (PFP_LENGTH, PFP_LENGTH))
-    return ImageRenderable(cropped),
+    return (ImageRenderable(cropped),)
 
 
 @render
@@ -324,12 +324,12 @@ def render_username(score):
                                    USERNAME_MIN_SIZE,
                                    USERNAME_MAX_SIZE,
                                    USERNAME_MAX_WIDTH)
-    return TextRenderable(score.player, size, WHITE),
+    return (TextRenderable(score.player, size, WHITE),)
 
 
 @render
 def render_combo(score):
-    return TextRenderable(f'{score.combo}×', COMBO_SIZE, DARK_GRAY),
+    return (TextRenderable(f'{score.combo}×', COMBO_SIZE, DARK_GRAY),)
 
 
 @render
@@ -365,7 +365,7 @@ def render_title(score):
                                        0,
                                        TITLE_MAX_SIZE,
                                        TITLE_MAX_WIDTH)
-        return TextRenderable(score.title, size, WHITE),
+        return (TextRenderable(score.title, size, WHITE),)
 
 
 @render
@@ -382,7 +382,7 @@ def render_mods(score):
         layers[i, :, offset:offset + MOD_WIDTH] = image
         offset += MOD_WIDTH - MOD_OVERLAP
     flattened = flatten(layers)
-    return ImageRenderable(flattened),
+    return (ImageRenderable(flattened),)
 
 
 @render
@@ -417,7 +417,7 @@ def render_ur(score):
         text = f"{score.ur:.2f} cv.UR"
     else:
         text = f"{score.ur:.2f} UR"
-    return TextRenderable(text, UR_SIZE, GOLD),
+    return (TextRenderable(text, UR_SIZE, GOLD),)
 
 
 @render
@@ -425,7 +425,7 @@ def render_misses(score):
     if score.misses == 0:
         return ()
     else:
-        return TextRenderable(str(score.misses), MISS_SIZE, RED),
+        return (TextRenderable(str(score.misses), MISS_SIZE, RED),)
 
 
 @render
@@ -433,7 +433,7 @@ def render_sliderbreaks(score):
     if score.sliderbreaks == 0:
         return ()
     else:
-        return TextRenderable(str(score.sliderbreaks), SB_SIZE, WHITE),
+        return (TextRenderable(str(score.sliderbreaks), SB_SIZE, WHITE),)
 
 
 def crop_background(image):
