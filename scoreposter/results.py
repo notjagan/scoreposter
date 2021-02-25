@@ -65,18 +65,16 @@ class Position:
     def left(self):
         if self.x_anchor is Anchor.LEFT:
             return self.x + self.offset
-        elif self.x_anchor is Anchor.RIGHT:
+        if self.x_anchor is Anchor.RIGHT:
             return self.x - self.width + self.offset
-        else:
-            return int(self.x - self.width/2) + self.offset
+        return int(self.x - self.width/2) + self.offset
 
     def top(self):
         if self.y_anchor is Anchor.TOP:
             return self.y
-        elif self.y_anchor is Anchor.BOTTOM:
+        if self.y_anchor is Anchor.BOTTOM:
             return self.y - self.height
-        else:
-            return int(self.y - self.height/2)
+        return int(self.y - self.height/2)
 
 
 RANK_LETTER_POSITION = Position(Anchor.CENTER, 411, Anchor.CENTER, Anchor.BOTTOM)
@@ -424,16 +422,14 @@ def render_ur(score):
 def render_misses(score):
     if score.misses == 0:
         return ()
-    else:
-        return (TextRenderable(str(score.misses), MISS_SIZE, RED),)
+    return (TextRenderable(str(score.misses), MISS_SIZE, RED),)
 
 
 @render
 def render_sliderbreaks(score):
     if score.sliderbreaks == 0:
         return ()
-    else:
-        return (TextRenderable(str(score.sliderbreaks), SB_SIZE, WHITE),)
+    return (TextRenderable(str(score.sliderbreaks), SB_SIZE, WHITE),)
 
 
 def crop_background(image):
@@ -443,11 +439,10 @@ def crop_background(image):
         resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
         w = resized.shape[1]
         return resized[:, int(w/2 - 1920/2):int(w/2 + 1920/2)]
-    else:
-        ratio = 1920/width
-        resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
-        h = resized.shape[0]
-        return resized[int(h/2 - 1080/2):int(h/2 + 1080/2)]
+    ratio = 1920/width
+    resized = cv2.resize(image, (0, 0), fx=ratio, fy=ratio)
+    h = resized.shape[0]
+    return resized[int(h/2 - 1080/2):int(h/2 + 1080/2)]
 
 
 def flatten(layers):
