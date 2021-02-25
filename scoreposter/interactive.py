@@ -37,9 +37,7 @@ options = PostOptions(
 )
 
 replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
-screenshots = (utils.OSU_PATH / 'Screenshots').glob('*.jpg')
 replay_path = max(replays, key=lambda path: path.stat().st_mtime)
-screenshot_path = max(screenshots, key=lambda path: path.stat().st_mtime)
 
 score = Score(replay_path)
 post = Post(score, options)
