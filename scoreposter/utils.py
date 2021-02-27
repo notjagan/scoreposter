@@ -3,8 +3,10 @@ import sqlite3
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
+from time import sleep, time
 
 import praw
+import numpy as np
 import requests
 from circleguard import Circleguard
 from osrparse.enums import Mod
@@ -16,6 +18,7 @@ DB_PATH = 'cache.db'
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
+OSU_RATE_LIMIT = 1200
 
 with open(KEYS_PATH) as file:
     data = json.load(file)
@@ -66,6 +69,8 @@ class OsuAPI:
         self.client_id = client_id
         self.client_secret = client_secret
         self.headers = self._headers()
+        self.times = np.full(OSU_RATE_LIMIT, -np.inf)
+        self.index = 0
 
     def _headers(self):
         endpoint = f'{OSU_URL}/oauth/token'
@@ -84,6 +89,12 @@ class OsuAPI:
         return headers
 
     def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
+        self.index = (self.index + 1) % OSU_RATE_LIMIT
+        difference = time() - self.times[self.index]
+        if difference < 60:
+            sleep(60 - difference)
+        self.times[self.index] = time()
+
         if version is OsuAPIVersion.V1:
             url = f'{V1_URL}/{endpoint}'
             parameters['k'] = self.key
