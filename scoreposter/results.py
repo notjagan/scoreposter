@@ -332,7 +332,7 @@ def render_combo(score):
 
 @render
 def render_ranks(score):
-    global_rank = score.user['statistics']['rank']['global']
+    global_rank = score.user['statistics']['global_rank']
     country_rank = score.user['statistics']['rank']['country']
     country_code = score.user['country']['code']
     image = download_image(f'http://osu.ppy.sh/images/flags/{country_code}.png')
