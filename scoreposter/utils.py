@@ -59,34 +59,41 @@ class OsuAPIVersion(Enum):
     V2 = 2
 
 
-def get_osu_headers():
-    endpoint = f'{OSU_URL}/oauth/token'
-    payload = {
-        'client_id':        OSU_CLIENT_ID,
-        'client_secret':    OSU_CLIENT_SECRET,
-        'grant_type':       'client_credentials',
-        'scope':            'public'
-    }
-    response = requests.post(endpoint, data=payload)
-    data = json.loads(response.text)
-    token_type = data['token_type']
-    access_token = data['access_token']
+class OsuAPI:
 
-    headers = {'Authorization': f'{token_type} {access_token}'}
-    return headers
+    def __init__(self, key, client_id, client_secret):
+        self.key = key
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.headers = self._headers()
 
+    def _headers(self):
+        endpoint = f'{OSU_URL}/oauth/token'
+        payload = {
+            'client_id':        self.client_id,
+            'client_secret':    self.client_secret,
+            'grant_type':       'client_credentials',
+            'scope':            'public'
+        }
+        response = requests.post(endpoint, data=payload)
+        data = json.loads(response.text)
+        token_type = data['token_type']
+        access_token = data['access_token']
 
-def request_osu_api(endpoint, parameters={}, version=OsuAPIVersion.V2):
-    if version is OsuAPIVersion.V1:
-        url = f'{V1_URL}/{endpoint}'
-        parameters['k'] = OSU_API_KEY
-        response = requests.get(url, params=parameters)
-    else:
-        url = f'{V2_URL}/{endpoint}'
-        response = requests.get(url, params=parameters, headers=osu_headers)
+        headers = {'Authorization': f'{token_type} {access_token}'}
+        return headers
 
-    data = json.loads(response.text)
-    return data
+    def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
+        if version is OsuAPIVersion.V1:
+            url = f'{V1_URL}/{endpoint}'
+            parameters['k'] = self.key
+            response = requests.get(url, params=parameters)
+        else:
+            url = f'{V2_URL}/{endpoint}'
+            response = requests.get(url, params=parameters, headers=self.headers)
+
+        data = json.loads(response.text)
+        return data
 
 
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):
@@ -94,4 +101,4 @@ def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     create_db(db_path)
 
 
-osu_headers = get_osu_headers()
+osu_api = OsuAPI(OSU_API_KEY, OSU_CLIENT_ID, OSU_CLIENT_SECRET)

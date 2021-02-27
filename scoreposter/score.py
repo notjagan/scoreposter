@@ -99,7 +99,7 @@ class Score:
             self.title = beatmap.title
             self.difficulty = beatmap.version
 
-            data = utils.request_osu_api(f'beatmaps/{self.beatmap_id}')
+            data = utils.osu_api.request(f'beatmaps/{self.beatmap_id}')
             cover_url = data['beatmapset']['covers']['cover@2x']
 
             response = requests.get(cover_url, stream=True)
@@ -114,12 +114,12 @@ class Score:
             'type':     'string'
         }
 
-        data = utils.request_osu_api('get_user', parameters,
+        data = utils.osu_api.request('get_user', parameters,
                                      utils.OsuAPIVersion.V1)[0]
         self.user_id = int(data['user_id'])
 
     def get_user(self):
-        self.user = utils.request_osu_api(f'users/{self.user_id}/osu')
+        self.user = utils.osu_api.request(f'users/{self.user_id}/osu')
 
     def get_mods(self):
         self.mods = {mod for mod in Mod
@@ -161,7 +161,7 @@ class Score:
     def find_submission(self):
         endpoint = f'users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
-        data = utils.request_osu_api(endpoint, parameters)
+        data = utils.osu_api.request(endpoint, parameters)
         if 'error' in data or len(data) != 1:
             return
 
@@ -178,7 +178,7 @@ class Score:
         if self.submission is not None:
             self.beatmap = self.submission['beatmap']
         else:
-            self.beatmap = utils.request_osu_api(f'beatmaps/{self.beatmap_id}')
+            self.beatmap = utils.osu_api.request(f'beatmaps/{self.beatmap_id}')
 
         status = self.beatmap['status']
         if status == 'ranked' or status == 'approved':
@@ -222,7 +222,7 @@ class Score:
 
     def get_ranking(self):
         if self.ranked or self.loved:
-            data = utils.request_osu_api(f'beatmaps/{self.beatmap_id}/scores')
+            data = utils.osu_api.request(f'beatmaps/{self.beatmap_id}/scores')
             if 'error' in data:
                 return
 
