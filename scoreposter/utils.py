@@ -16,6 +16,7 @@ from osrparse.enums import Mod
 KEYS_PATH = 'keys.json'
 CONFIG_PATH = 'config.json'
 DB_PATH = 'cache.db'
+WHITELIST_PATH = 'players.list'
 
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'

@@ -130,8 +130,7 @@ class Score:
             'type':     'string'
         }
 
-        data = await self.osu_api.request('get_user', parameters,
-                                          utils.OsuAPIVersion.V1)
+        data = await self.osu_api.request('get_user', parameters, utils.OsuAPIVersion.V1)
         self.user_id = int(data[0]['user_id'])
 
     async def get_user(self):
