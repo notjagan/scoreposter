@@ -7,9 +7,9 @@ from pathlib import Path
 from time import time
 
 import aiohttp
+import numpy as np
 import praw
 import requests
-import numpy as np
 from circleguard import Circleguard
 from osrparse.enums import Mod
 

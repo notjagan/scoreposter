@@ -1,12 +1,11 @@
 import asyncio
-import shutil
 from enum import Enum, auto
 from functools import reduce
+from pathlib import Path
 from re import search
-from tempfile import NamedTemporaryFile
 
+import aiofiles
 import oppai
-import requests
 import utils
 from circleguard import ReplayPath
 from colors import color
@@ -40,17 +39,19 @@ class Score:
         self.ranking = None
         self.cg_replay = None
 
-        await self.process_beatmap()
+        needs_bg = await self.process_beatmap()
         await self.get_id()
         await self.find_submission()
 
         user_task = asyncio.create_task(self.get_user())
         status_task = asyncio.create_task(self.get_status())
         ranking_task = asyncio.create_task(self.get_ranking())
+        bg_task = asyncio.create_task(self.get_background(needs_bg))
 
         await user_task
         await status_task
         await ranking_task
+        await bg_task
 
         self.get_mods()
         self.calculate_accuracy()
@@ -86,6 +87,8 @@ class Score:
                     bg_file = search('"(.+?)"', line).group(1)
                     break
             self.bg_path = map_folder / bg_file
+            return False
+
         else:
             print(color("Beatmap not in osu!.db, defaulting to Circleguard version.",
                         fg='red'))
@@ -107,15 +110,19 @@ class Score:
             self.artist = beatmap.artist
             self.title = beatmap.title
             self.difficulty = beatmap.version
+            return True
 
-            data = await self.osu_api.request(f'beatmaps/{self.beatmap_id}')
-            cover_url = data['beatmapset']['covers']['cover@2x']
+    async def get_background(self, needs_bg):
+        if not needs_bg:
+            return
 
-            response = requests.get(cover_url, stream=True)
-            response.raw_decode_content = True
-            with NamedTemporaryFile(mode='wb', delete=False) as image:
-                shutil.copyfileobj(response.raw, image)
-                self.bg_path = image.name
+        self.bg_path = Path('output/bg')
+        data = await self.osu_api.request(f'beatmaps/{self.beatmap_id}')
+        cover_url = data['beatmapset']['covers']['cover@2x']
+
+        async with self.osu_api.session.get(cover_url) as response:
+            async with aiofiles.open(self.bg_path, 'wb') as image:
+                await image.write(await response.read())
 
     async def get_id(self):
         parameters = {
