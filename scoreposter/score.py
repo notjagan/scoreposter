@@ -39,7 +39,7 @@ class Score:
         self.ranking = None
         self.cg_replay = None
 
-        needs_bg = await self.process_beatmap()
+        needs_bg = self.process_beatmap()
         await self.get_id()
         await self.find_submission()
 
@@ -65,7 +65,7 @@ class Score:
         self.combo = self.replay.max_combo
         self.misses = self.replay.misses
 
-    async def process_beatmap(self):
+    def process_beatmap(self):
         cur = utils.osu_db.execute('SELECT beatmap_id, folder_name, map_file, artist, '
                                    'title, difficulty FROM maps WHERE md5_hash=?',
                                    (self.replay.beatmap_hash,))
