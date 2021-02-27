@@ -1,13 +1,15 @@
+import asyncio
 import json
 import sqlite3
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from time import sleep, time
+from time import time
 
+import aiohttp
 import praw
-import numpy as np
 import requests
+import numpy as np
 from circleguard import Circleguard
 from osrparse.enums import Mod
 
@@ -64,13 +66,21 @@ class OsuAPIVersion(Enum):
 
 class OsuAPI:
 
-    def __init__(self, key, client_id, client_secret):
+    def __init__(self, key=OSU_API_KEY, client_id=OSU_CLIENT_ID, client_secret=OSU_CLIENT_SECRET):
         self.key = key
         self.client_id = client_id
         self.client_secret = client_secret
         self.headers = self._headers()
         self.times = np.full(OSU_RATE_LIMIT, -np.inf)
         self.index = 0
+
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.session.close()
+        self.session = None
 
     def _headers(self):
         endpoint = f'{OSU_URL}/oauth/token'
@@ -88,28 +98,27 @@ class OsuAPI:
         headers = {'Authorization': f'{token_type} {access_token}'}
         return headers
 
-    def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
+    async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
         self.index = (self.index + 1) % OSU_RATE_LIMIT
         difference = time() - self.times[self.index]
         if difference < 60:
-            sleep(60 - difference)
+            await asyncio.sleep(60 - difference)
         self.times[self.index] = time()
 
         if version is OsuAPIVersion.V1:
             url = f'{V1_URL}/{endpoint}'
             parameters['k'] = self.key
-            response = requests.get(url, params=parameters)
+            async with self.session.get(url, params=parameters) as response:
+                data = json.loads(await response.text())
+
         else:
             url = f'{V2_URL}/{endpoint}'
-            response = requests.get(url, params=parameters, headers=self.headers)
+            async with self.session.get(url, params=parameters, headers=self.headers) as response:
+                data = json.loads(await response.text())
 
-        data = json.loads(response.text)
         return data
 
 
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     from osu_db_tools.osu_to_sqlite import create_db
     create_db(db_path)
-
-
-osu_api = OsuAPI(OSU_API_KEY, OSU_CLIENT_ID, OSU_CLIENT_SECRET)

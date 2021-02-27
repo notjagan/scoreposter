@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import asyncio
 import webbrowser
 
 import pyperclip
@@ -42,11 +43,11 @@ if replay_path is None:
     replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
     replay_path = max(replays, key=lambda path: path.stat().st_mtime)
 
-score = Score(replay_path)
+score = asyncio.run(Score.create_score(replay_path))
 post = Post(score, options)
 print(title := post.title)
 
-actions = ['p', 'm', 'o', 'r', 'c', 'b', 'q']
+actions = ['p', 'm', 'o', 'c', 'b', 'q']
 action_text = "/".join(actions)
 action = ''
 while action != 'q':
@@ -74,15 +75,6 @@ while action != 'q':
         if 'u' in to_toggle:
             options.show_ur = not options.show_ur
         print(title := post.title)
-    elif action == 'r':
-        print("Checking for submission...")
-        score.find_submission()
-        if score.submission is not None:
-            score.get_status()
-            score.calculate_statistics()
-            score.get_ranking()
-        else:
-            print(color("Submission not found.", fg='red'))
     elif action == 'c':
         pyperclip.copy(title)
         print(color("Title copied to clipboard!", fg='green'))
