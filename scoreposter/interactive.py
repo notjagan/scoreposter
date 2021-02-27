@@ -30,11 +30,11 @@ if args.refresh:
     exit()
 
 options = PostOptions(
-    args.show_pp,
-    args.show_fc_pp,
-    args.show_combo,
-    args.show_ur,
-    args.message
+    show_pp=args.show_pp,
+    show_fc_pp=args.show_fc_pp,
+    show_combo=args.show_combo,
+    show_ur=args.show_ur,
+    message=args.message
 )
 
 replay_path = args.replay
