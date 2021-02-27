@@ -10,6 +10,7 @@ from post import Post, PostOptions
 from score import Score
 
 parser = argparse.ArgumentParser()
+parser.add_argument('replay', nargs='?', default=None)
 parser.add_argument('-p', '--no-pp', dest='show_pp',
                     action='store_false')
 parser.add_argument('-f', '--no-fc-pp', dest='show_fc_pp',
@@ -36,8 +37,10 @@ options = PostOptions(
     args.message
 )
 
-replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
-replay_path = max(replays, key=lambda path: path.stat().st_mtime)
+replay_path = args.replay
+if replay_path is None:
+    replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
+    replay_path = max(replays, key=lambda path: path.stat().st_mtime)
 
 score = Score(replay_path)
 post = Post(score, options)
