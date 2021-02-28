@@ -82,7 +82,7 @@ class OsuAPI:
         self.client_id = client_id
         self.client_secret = client_secret
         self.headers = self._headers(mode)
-        self.times = np.full(OSU_RATE_LIMIT, -np.inf)
+        self.times = np.full(OSU_RATE_LIMIT - 1, -np.inf)
         self.index = 0
 
     async def __aenter__(self):
@@ -131,7 +131,7 @@ class OsuAPI:
         return headers
 
     async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
-        self.index = (self.index + 1) % OSU_RATE_LIMIT
+        self.index = (self.index + 1) % (OSU_RATE_LIMIT - 1)
         difference = time() - self.times[self.index]
         if difference < 60:
             await asyncio.sleep(60 - difference)
@@ -171,10 +171,21 @@ def get_code():
     class Server(BaseHTTPRequestHandler):
         def do_GET(self):
             nonlocal code, running
+
+            response = b'<body onload="window.close()" />'
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.send_header("Content-length", len(response))
+            self.end_headers()
+            self.wfile.write(response)
+
             components = urlparse(self.path)
             values = parse_qs(components.query)
             code = values['code'][0]
             running = False
+
+        def log_message(self, *args):
+            return
 
     server = HTTPServer(('localhost', 7270), Server)
     while running:
