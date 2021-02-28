@@ -1,15 +1,14 @@
 #!/usr/bin/python3
 
 import asyncio
-import utils
 from datetime import datetime, timedelta
 
+import utils
+from post import Post, PostOptions
 from pytz import timezone
+from score import Score
 
 EST = timezone('US/Eastern')
-mods_inv = {}
-for k, v in utils.MODS.items():
-    mods_inv[v] = k
 
 
 class Player:
@@ -30,7 +29,7 @@ class Player:
         if datetime.now(EST) - timestamp > timedelta(hours=1):
             return False
         return True
-    
+
     async def get_latest_play(self):
         endpoint = f'users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
@@ -38,7 +37,7 @@ class Player:
         if len(data) != 1:
             return None
         return data
-    
+
     async def loop(self):
         latest_play = await self.get_latest_play()
         while True:
@@ -46,14 +45,20 @@ class Player:
             if not self.tracking:
                 await asyncio.sleep(60)
                 continue
-            
+
             new_play = await self.get_latest_play()
-            if new_play == latest_play or latest_play == None:
+            if new_play == latest_play or latest_play is None:
                 continue
 
             latest_play = new_play
             if latest_play['pp'] is not None and latest_play['pp'] >= 800 and latest_play['replay']:
-                pass
+                score_id = latest_play['id']
+                replay_path = await self.osu_api.download_replay(score_id)
+                score = Score(replay_path, self.osu_api)
+                await score._init()
+                options = PostOptions()
+                post = Post(score, options)
+                post.submit()
 
 
 class Tracker:
@@ -76,9 +81,9 @@ class Tracker:
     def track(cls, user_ids):
         async def track_async(cls, user_ids):
             async with utils.OsuAPI(mode=utils.OsuAuthenticationMode.AUTHORIZATION_CODE) as osu_api:
-                tracker = cls(user_ids, osu_api)
+                cls(user_ids, osu_api)
                 await asyncio.gather(*asyncio.all_tasks())
-        
+
         asyncio.run(track_async(cls, user_ids))
 
 
