@@ -26,7 +26,7 @@ class Player:
             return False
         self.username = data[0]['user']['username']
         timestamp = datetime.fromisoformat(data[0]['created_at'])
-        if datetime.now(EST) - timestamp > timedelta(hours=1):
+        if datetime.now(EST) - timestamp > timedelta(minutes=30):
             return False
         return True
 
