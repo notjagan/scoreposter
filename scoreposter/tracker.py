@@ -22,7 +22,7 @@ class Player:
         endpoint = f'users/{self.user_id}/scores/recent'
         parameters = {'include_fails': 1, 'limit': 1}
         data = await self.osu_api.request(endpoint, parameters)
-        if len(data) != 1:
+        if len(data) != 1 or type(data) is not list:
             return False
         self.username = data[0]['user']['username']
         timestamp = datetime.fromisoformat(data[0]['created_at'])
@@ -34,13 +34,14 @@ class Player:
         endpoint = f'users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
         data = await self.osu_api.request(endpoint, parameters)
-        if len(data) != 1:
+        if len(data) != 1 or type(data is not list):
             return None
-        return data
+        return data[0]
 
     async def loop(self):
         latest_play = await self.get_latest_play()
         while True:
+            await asyncio.sleep(1)
             self.tracking = await self.is_active()
             if not self.tracking:
                 await asyncio.sleep(60)
@@ -59,6 +60,7 @@ class Player:
                 options = PostOptions()
                 post = Post(score, options)
                 post.submit()
+                print(post.title)
 
 
 class Tracker:
