@@ -1,11 +1,15 @@
 import asyncio
 import json
 import sqlite3
+import webbrowser
 from collections import OrderedDict
 from enum import Enum
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from time import time
+from urllib.parse import parse_qs, urlparse
 
+import aiofiles
 import aiohttp
 import numpy as np
 import praw
@@ -65,13 +69,19 @@ class OsuAPIVersion(Enum):
     V2 = 2
 
 
+class OsuAuthenticationMode(Enum):
+    CLIENT_CREDENTIALS = 1
+    AUTHORIZATION_CODE = 2
+
+
 class OsuAPI:
 
-    def __init__(self, key=OSU_API_KEY, client_id=OSU_CLIENT_ID, client_secret=OSU_CLIENT_SECRET):
+    def __init__(self, key=OSU_API_KEY, client_id=OSU_CLIENT_ID, client_secret=OSU_CLIENT_SECRET,
+                 mode=OsuAuthenticationMode.CLIENT_CREDENTIALS):
         self.key = key
         self.client_id = client_id
         self.client_secret = client_secret
-        self.headers = self._headers()
+        self.headers = self._headers(mode)
         self.times = np.full(OSU_RATE_LIMIT, -np.inf)
         self.index = 0
 
@@ -83,14 +93,35 @@ class OsuAPI:
         await self.session.close()
         self.session = None
 
-    def _headers(self):
+    def _headers(self, mode):
         endpoint = f'{OSU_URL}/oauth/token'
         payload = {
             'client_id':        self.client_id,
             'client_secret':    self.client_secret,
             'grant_type':       'client_credentials',
-            'scope':            'public'
+            'scope':            'public',
         }
+
+        if mode is OsuAuthenticationMode.AUTHORIZATION_CODE:
+            endpoint_2 = f'{OSU_URL}/oauth/authorize'
+            params = {
+                'client_id':        self.client_id,
+                'scope':            'public',
+                'response_type':    'code',
+                'redirect_uri':     'http://localhost:7270'
+            }
+            request = requests.Request('GET', url=endpoint_2, params=params)
+            url = request.prepare().url
+            webbrowser.open(url)
+            code = get_code()
+            payload = {
+                'client_id':        self.client_id,
+                'client_secret':    self.client_secret,
+                'grant_type':       'authorization_code',
+                'code':             code,
+                'redirect_uri':     'http://localhost:7270'
+            }
+
         response = requests.post(endpoint, data=payload)
         data = json.loads(response.text)
         token_type = data['token_type']
@@ -123,3 +154,22 @@ class OsuAPI:
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     from osu_db_tools.osu_to_sqlite import create_db
     create_db(db_path)
+
+
+def get_code():
+    code = None
+    running = True
+
+    class Server(BaseHTTPRequestHandler):
+        def do_GET(self):
+            nonlocal code, running
+            components = urlparse(self.path)
+            values = parse_qs(components.query)
+            code = values['code'][0]
+            running = False
+
+    server = HTTPServer(('localhost', 7270), Server)
+    while running:
+        server.handle_request()
+
+    return code

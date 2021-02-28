@@ -75,7 +75,7 @@ class Tracker:
     @classmethod
     def track(cls, user_ids):
         async def track_async(cls, user_ids):
-            async with utils.OsuAPI() as osu_api:
+            async with utils.OsuAPI(mode=utils.OsuAuthenticationMode.AUTHORIZATION_CODE) as osu_api:
                 tracker = cls(user_ids, osu_api)
                 await asyncio.gather(*asyncio.all_tasks())
         
