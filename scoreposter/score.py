@@ -72,24 +72,7 @@ class Score:
         result = cur.fetchone()
         cur.close()
 
-        if result is not None:
-            self.beatmap_id, folder_name, map_file, self.artist, \
-                self.title, self.difficulty = result
-            map_folder = utils.BEATMAPS_DIR / folder_name
-            self.map_path = map_folder / map_file
-
-            with open(self.map_path) as file:
-                lines = file.readlines()
-            groups = Beatmap._find_groups(lines)
-            events = groups['Events']
-            for line in events:
-                if any(ext in line for ext in ['.jpg', '.jpeg', '.png']):
-                    bg_file = search('"(.+?)"', line).group(1)
-                    break
-            self.bg_path = map_folder / bg_file
-            return False
-
-        else:
+        if result is None:
             print(color("Beatmap not in osu!.db, defaulting to Circleguard version.",
                         fg='red'))
             self.cg_replay = ReplayPath(self.replay_path)
@@ -111,6 +94,22 @@ class Score:
             self.title = beatmap.title
             self.difficulty = beatmap.version
             return True
+
+        self.beatmap_id, folder_name, map_file, self.artist, \
+            self.title, self.difficulty = result
+        map_folder = utils.BEATMAPS_DIR / folder_name
+        self.map_path = map_folder / map_file
+
+        with open(self.map_path) as file:
+            lines = file.readlines()
+        groups = Beatmap._find_groups(lines)
+        events = groups['Events']
+        for line in events:
+            if any(ext in line for ext in ['.jpg', '.jpeg', '.png']):
+                bg_file = search('"(.+?)"', line).group(1)
+                break
+        self.bg_path = map_folder / bg_file
+        return False
 
     async def get_background(self, needs_bg):
         if not needs_bg:
