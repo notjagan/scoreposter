@@ -150,6 +150,14 @@ class OsuAPI:
 
         return data
 
+    async def download_replay(self, score_id):
+        replay_path = (Path('output') / str(score_id)).with_suffix('.osr')
+        endpoint = f'{V2_URL}/scores/osu/{score_id}/download'
+        async with self.session.get(endpoint, headers=self.headers) as response:
+            async with aiofiles.open(replay_path, 'wb') as replay:
+                await replay.write(await response.read())
+        return replay_path
+
 
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     from osu_db_tools.osu_to_sqlite import create_db
