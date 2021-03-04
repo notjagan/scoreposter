@@ -71,7 +71,8 @@ class Player:
 class Tracker:
 
     def __init__(self, user_ids, osu_api):
-        self.players = [Player(user_id, osu_api) for user_id in user_ids]
+        self.osu_api = osu_api
+        self.players = [Player(user_id, self.osu_api) for user_id in user_ids]
         event_loop = asyncio.get_event_loop()
         for player in self.players:
             event_loop.create_task(player.loop())
@@ -82,6 +83,9 @@ class Tracker:
         while True:
             tracking = ", ".join(player.username for player in self.players if player.tracking)
             print(f"Currently tracking: {tracking}")
+            rate = self.osu_api.get_current_rate()
+            if rate is not None:
+                print(f"API call load: {rate:.0f}/{utils.OSU_RATE_LIMIT} per minute")
             await asyncio.sleep(300)
 
     @classmethod

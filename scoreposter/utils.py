@@ -137,6 +137,12 @@ class OsuAPI:
             await asyncio.sleep(60 - difference)
         self.times[self.index] = time()
 
+    def get_current_rate(self):
+        previous_time = self.times[(self.index + 1) % (OSU_RATE_LIMIT - 1)]
+        if previous_time == -np.inf:
+            return None
+        return OSU_RATE_LIMIT*60/(time() - previous_time)
+
     async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
         await self.ensure_rate_limit()
 
