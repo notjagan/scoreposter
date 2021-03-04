@@ -33,6 +33,7 @@ class Score:
         self.osu_api = osu_api
         self.replay = parse_replay_file(replay_path)
         self.process_replay()
+        self.get_mods()
 
     async def _init(self):
         self.submission = None
@@ -53,7 +54,6 @@ class Score:
         await ranking_task
         await bg_task
 
-        self.get_mods()
         self.calculate_accuracy()
         self.calculate_sliderbreaks()
         self.calculate_statistics()

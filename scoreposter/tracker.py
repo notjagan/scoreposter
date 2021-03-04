@@ -42,25 +42,30 @@ class Player:
         latest_play = await self.get_latest_play()
         while True:
             await asyncio.sleep(1)
-            self.tracking = await self.is_active()
-            if not self.tracking:
-                await asyncio.sleep(60)
-                continue
+            try:
+                self.tracking = await self.is_active()
+                if not self.tracking:
+                    await asyncio.sleep(60)
+                    continue
 
-            new_play = await self.get_latest_play()
-            if new_play == latest_play or latest_play is None:
-                continue
+                new_play = await self.get_latest_play()
+                if latest_play is None or new_play['id'] == latest_play['id']:
+                    continue
 
-            latest_play = new_play
-            if latest_play['pp'] is not None and latest_play['pp'] >= 800 and latest_play['replay']:
-                score_id = latest_play['id']
-                replay_path = await self.osu_api.download_replay(score_id)
-                score = Score(replay_path, self.osu_api)
-                await score._init()
-                options = PostOptions()
-                post = Post(score, options)
-                post.submit()
-                print(post.title)
+                latest_play = new_play
+                if latest_play['pp'] is not None and latest_play['pp'] >= 700 and latest_play['replay']:
+                    score_id = latest_play['best_id']
+                    replay_path = await self.osu_api.download_replay(score_id)
+                    score = Score(replay_path, self.osu_api)
+                    await score._init()
+                    options = PostOptions()
+                    post = Post(score, options)
+                    post.submit()
+                    print(post.title)
+
+            except Exception:
+                import traceback
+                traceback.print_exc()
 
 
 class Tracker:
