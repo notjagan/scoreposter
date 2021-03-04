@@ -130,12 +130,15 @@ class OsuAPI:
         headers = {'Authorization': f'{token_type} {access_token}'}
         return headers
 
-    async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
+    async def ensure_rate_limit(self):
         self.index = (self.index + 1) % (OSU_RATE_LIMIT - 1)
         difference = time() - self.times[self.index]
         if difference < 60:
             await asyncio.sleep(60 - difference)
         self.times[self.index] = time()
+
+    async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
+        await self.ensure_rate_limit()
 
         if version is OsuAPIVersion.V1:
             url = f'{V1_URL}/{endpoint}'
@@ -151,6 +154,8 @@ class OsuAPI:
         return data
 
     async def download_replay(self, score_id):
+        await self.ensure_rate_limit()
+
         replay_path = (Path('output') / str(score_id)).with_suffix('.osr')
         endpoint = f'{V2_URL}/scores/osu/{score_id}/download'
         async with self.session.get(endpoint, headers=self.headers) as response:
