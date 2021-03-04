@@ -138,10 +138,10 @@ class OsuAPI:
         self.times[self.index] = time()
 
     def get_current_rate(self):
-        previous_time = self.times[(self.index + 1) % (OSU_RATE_LIMIT - 1)]
-        if previous_time == -np.inf:
-            return None
-        return OSU_RATE_LIMIT*60/(time() - previous_time)
+        previous_minute = np.where(time() - self.times <= 60)[0]
+        indices = (self.index - previous_minute) % (OSU_RATE_LIMIT - 1)
+        if len(indices) > 0:
+            return indices.max() + 1
 
     async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
         await self.ensure_rate_limit()
