@@ -61,7 +61,7 @@ class Player:
                     replay_path = await self.osu_api.download_replay(score_id)
                     score = Score(replay_path, self.osu_api)
                     await score._init()
-                    options = PostOptions()
+                    options = PostOptions(show_combo=False)
                     post = Post(score, options)
                     post.submit()
                     print(post.title)
