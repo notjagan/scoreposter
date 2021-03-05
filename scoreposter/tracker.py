@@ -40,6 +40,7 @@ class Player:
 
     async def loop(self):
         latest_play = await self.get_latest_play()
+        self.last_posted = latest_play
         while True:
             await asyncio.sleep(1)
             try:
@@ -49,11 +50,13 @@ class Player:
                     continue
 
                 new_play = await self.get_latest_play()
-                if latest_play is None or new_play['id'] == latest_play['id']:
+                if latest_play is None or new_play == latest_play or \
+                   self.last_posted is not None and self.last_posted['id'] == new_play['id']:
                     continue
 
                 latest_play = new_play
                 if latest_play['pp'] is not None and latest_play['pp'] >= 700 and latest_play['replay']:
+                    self.last_posted = latest_play
                     score_id = latest_play['best_id']
                     replay_path = await self.osu_api.download_replay(score_id)
                     score = Score(replay_path, self.osu_api)
