@@ -48,7 +48,7 @@ class Player:
             try:
                 new_play = await self.get_latest_play()
                 if new_play is None or new_play == latest_play or \
-                   last_yielded is not None and self.last_yielded['id'] == new_play['id']:
+                   last_yielded is not None and last_yielded['id'] == new_play['id']:
                     continue
 
                 latest_play = new_play
@@ -57,6 +57,10 @@ class Player:
                     score_id = latest_play['best_id']
                     replay_path = await self.osu_api.download_replay(score_id)
                     yield replay_path
+            
+            except Exception:
+                import traceback
+                traceback.print_exc()
 
     async def loop(self):
         latest_play = await self.get_latest_play()
@@ -121,10 +125,12 @@ class Tracker:
         asyncio.run(track_async(cls, user_ids))
 
 
-def loop_plays(user_id):
+async def loop_plays(user_id):
     async with utils.OsuAPI(mode=utils.OsuAuthenticationMode.AUTHORIZATION_CODE) as osu_api:
+        print("Awaiting replays.")
         player = Player(user_id, osu_api)
         async for replay_path in player.iter_replays():
+            print("Replay found!")
             run_interactive_mode(replay_path)
 
 
