@@ -154,8 +154,11 @@ class OsuAPI:
 
         else:
             url = f'{V2_URL}/{endpoint}'
-            async with self.session.get(url, params=parameters, headers=self.headers) as response:
-                data = json.loads(await response.text())
+            try:
+                async with self.session.get(url, params=parameters, headers=self.headers) as response:
+                    data = json.loads(await response.text())
+            except json.JSONDecodeError:
+                return None
 
         return data
 
