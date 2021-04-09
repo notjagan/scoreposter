@@ -1,11 +1,11 @@
-import shutil
+import asyncio
 from enum import Enum, auto
 from functools import reduce
+from pathlib import Path
 from re import search
-from tempfile import NamedTemporaryFile
 
+import aiofiles
 import oppai
-import requests
 import utils
 from circleguard import ReplayPath
 from colors import color
@@ -28,26 +28,36 @@ class Rank(Enum):
 
 class Score:
 
-    def __init__(self, replay_path):
+    def __init__(self, replay_path, osu_api):
         self.replay_path = replay_path
+        self.osu_api = osu_api
         self.replay = parse_replay_file(replay_path)
+        self.process_replay()
+        self.get_mods()
 
+    async def _init(self):
         self.submission = None
         self.ranking = None
         self.cg_replay = None
 
-        self.process_replay()
-        self.process_beatmap()
-        self.get_id()
-        self.get_user()
-        self.get_mods()
+        needs_bg = self.process_beatmap()
+        await self.get_id()
+        await self.find_submission()
+
+        user_task = asyncio.create_task(self.get_user())
+        status_task = asyncio.create_task(self.get_status())
+        ranking_task = asyncio.create_task(self.get_ranking())
+        bg_task = asyncio.create_task(self.get_background(needs_bg))
+
+        await user_task
+        await status_task
+        await ranking_task
+        await bg_task
+
         self.calculate_accuracy()
         self.calculate_sliderbreaks()
-        self.find_submission()
-        self.get_status()
         self.calculate_statistics()
         self.find_ur()
-        self.get_ranking()
         self.get_rank()
 
     def process_replay(self):
@@ -62,22 +72,7 @@ class Score:
         result = cur.fetchone()
         cur.close()
 
-        if result is not None:
-            self.beatmap_id, folder_name, map_file, self.artist, \
-                self.title, self.difficulty = result
-            map_folder = utils.BEATMAPS_DIR / folder_name
-            self.map_path = map_folder / map_file
-
-            with open(self.map_path) as file:
-                lines = file.readlines()
-            groups = Beatmap._find_groups(lines)
-            events = groups['Events']
-            for line in events:
-                if any(ext in line for ext in ['.jpg', '.jpeg', '.png']):
-                    bg_file = search('"(.+?)"', line).group(1)
-                    break
-            self.bg_path = map_folder / bg_file
-        else:
+        if result is None:
             print(color("Beatmap not in osu!.db, defaulting to Circleguard version.",
                         fg='red'))
             self.cg_replay = ReplayPath(self.replay_path)
@@ -98,28 +93,47 @@ class Score:
             self.artist = beatmap.artist
             self.title = beatmap.title
             self.difficulty = beatmap.version
+            return True
 
-            data = utils.request_osu_api(f'beatmaps/{self.beatmap_id}')
-            cover_url = data['beatmapset']['covers']['cover@2x']
+        self.beatmap_id, folder_name, map_file, self.artist, \
+            self.title, self.difficulty = result
+        map_folder = utils.BEATMAPS_DIR / folder_name
+        self.map_path = map_folder / map_file
 
-            response = requests.get(cover_url, stream=True)
-            response.raw_decode_content = True
-            with NamedTemporaryFile(mode='wb', delete=False) as image:
-                shutil.copyfileobj(response.raw, image)
-                self.bg_path = image.name
+        with open(self.map_path) as file:
+            lines = file.readlines()
+        groups = Beatmap._find_groups(lines)
+        events = groups['Events']
+        for line in events:
+            if any(ext in line for ext in ['.jpg', '.jpeg', '.png']):
+                bg_file = search('"(.+?)"', line).group(1)
+                break
+        self.bg_path = map_folder / bg_file
+        return False
 
-    def get_id(self):
+    async def get_background(self, needs_bg):
+        if not needs_bg:
+            return
+
+        self.bg_path = Path('output/bg')
+        data = await self.osu_api.request(f'beatmaps/{self.beatmap_id}')
+        cover_url = data['beatmapset']['covers']['cover@2x']
+
+        async with self.osu_api.session.get(cover_url) as response:
+            async with aiofiles.open(self.bg_path, 'wb') as image:
+                await image.write(await response.read())
+
+    async def get_id(self):
         parameters = {
             'u':        self.player,
             'type':     'string'
         }
 
-        data = utils.request_osu_api('get_user', parameters,
-                                     utils.OsuAPIVersion.V1)[0]
-        self.user_id = int(data['user_id'])
+        data = await self.osu_api.request('get_user', parameters, utils.OsuAPIVersion.V1)
+        self.user_id = int(data[0]['user_id'])
 
-    def get_user(self):
-        self.user = utils.request_osu_api(f'users/{self.user_id}/osu')
+    async def get_user(self):
+        self.user = await self.osu_api.request(f'users/{self.user_id}/osu')
 
     def get_mods(self):
         self.mods = {mod for mod in Mod
@@ -158,10 +172,10 @@ class Score:
             score['max_combo'] == self.combo and                    \
             set(score['mods']) == {utils.MODS[mod] for mod in self.mods}
 
-    def find_submission(self):
+    async def find_submission(self):
         endpoint = f'users/{self.user_id}/scores/recent'
         parameters = {'limit': 1}
-        data = utils.request_osu_api(endpoint, parameters)
+        data = await self.osu_api.request(endpoint, parameters)
         if 'error' in data or len(data) != 1:
             return
 
@@ -170,7 +184,7 @@ class Score:
             self.submission = score
             print(color("Submission found!", fg='green'))
 
-    def get_status(self):
+    async def get_status(self):
         self.ranked = False
         self.loved = False
         self.submitted = True
@@ -178,7 +192,7 @@ class Score:
         if self.submission is not None:
             self.beatmap = self.submission['beatmap']
         else:
-            self.beatmap = utils.request_osu_api(f'beatmaps/{self.beatmap_id}')
+            self.beatmap = await self.osu_api.request(f'beatmaps/{self.beatmap_id}')
 
         status = self.beatmap['status']
         if status == 'ranked' or status == 'approved':
@@ -220,9 +234,9 @@ class Score:
             self.cg_replay = ReplayPath(self.replay_path)
         self.ur = utils.cg.ur(self.cg_replay)
 
-    def get_ranking(self):
+    async def get_ranking(self):
         if self.ranked or self.loved:
-            data = utils.request_osu_api(f'beatmaps/{self.beatmap_id}/scores')
+            data = await self.osu_api.request(f'beatmaps/{self.beatmap_id}/scores')
             if 'error' in data:
                 return
 
@@ -307,3 +321,10 @@ class Score:
 
         title = ' | '.join(segments)
         return title
+
+    @classmethod
+    async def create_score(cls, replay_path):
+        async with utils.OsuAPI() as osu_api:
+            score = cls(replay_path, osu_api)
+            await score._init()
+        return score

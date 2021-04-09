@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import asyncio
 from copy import deepcopy
 from enum import Enum, auto
 from pathlib import Path
@@ -35,6 +36,7 @@ class Anchor(Enum):
 
 
 class Position:
+
     def __init__(self, x, y, x_anchor, y_anchor):
         if isinstance(x, Anchor):
             if x is Anchor.LEFT:
@@ -510,6 +512,6 @@ if __name__ == "__main__":
     from post import PostOptions
 
     replay_path = argv[1]
-    score = Score(replay_path)
+    score = asyncio.run(Score.create_score(replay_path))
     options = PostOptions()
     render_results(score, options)

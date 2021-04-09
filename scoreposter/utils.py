@@ -1,9 +1,17 @@
+import asyncio
 import json
 import sqlite3
+import webbrowser
 from collections import OrderedDict
 from enum import Enum
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from time import time
+from urllib.parse import parse_qs, urlparse
 
+import aiofiles
+import aiohttp
+import numpy as np
 import praw
 import requests
 from circleguard import Circleguard
@@ -12,10 +20,12 @@ from osrparse.enums import Mod
 KEYS_PATH = 'keys.json'
 CONFIG_PATH = 'config.json'
 DB_PATH = 'cache.db'
+WHITELIST_PATH = 'players.list'
 
 OSU_URL = 'https://osu.ppy.sh'
 V1_URL = f'{OSU_URL}/api'
 V2_URL = f'{V1_URL}/v2'
+OSU_RATE_LIMIT = 1200
 
 with open(KEYS_PATH) as file:
     data = json.load(file)
@@ -59,34 +69,108 @@ class OsuAPIVersion(Enum):
     V2 = 2
 
 
-def get_osu_headers():
-    endpoint = f'{OSU_URL}/oauth/token'
-    payload = {
-        'client_id':        OSU_CLIENT_ID,
-        'client_secret':    OSU_CLIENT_SECRET,
-        'grant_type':       'client_credentials',
-        'scope':            'public'
-    }
-    response = requests.post(endpoint, data=payload)
-    data = json.loads(response.text)
-    token_type = data['token_type']
-    access_token = data['access_token']
-
-    headers = {'Authorization': f'{token_type} {access_token}'}
-    return headers
+class OsuAuthenticationMode(Enum):
+    CLIENT_CREDENTIALS = 1
+    AUTHORIZATION_CODE = 2
 
 
-def request_osu_api(endpoint, parameters={}, version=OsuAPIVersion.V2):
-    if version is OsuAPIVersion.V1:
-        url = f'{V1_URL}/{endpoint}'
-        parameters['k'] = OSU_API_KEY
-        response = requests.get(url, params=parameters)
-    else:
-        url = f'{V2_URL}/{endpoint}'
-        response = requests.get(url, params=parameters, headers=osu_headers)
+class OsuAPI:
 
-    data = json.loads(response.text)
-    return data
+    def __init__(self, key=OSU_API_KEY, client_id=OSU_CLIENT_ID, client_secret=OSU_CLIENT_SECRET,
+                 mode=OsuAuthenticationMode.CLIENT_CREDENTIALS):
+        self.key = key
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.headers = self._headers(mode)
+        self.times = np.full(OSU_RATE_LIMIT - 1, -np.inf)
+        self.index = 0
+
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+
+    async def __aexit__(self, *args):
+        await self.session.close()
+        self.session = None
+
+    def _headers(self, mode):
+        endpoint = f'{OSU_URL}/oauth/token'
+        payload = {
+            'client_id':        self.client_id,
+            'client_secret':    self.client_secret,
+            'grant_type':       'client_credentials',
+            'scope':            'public',
+        }
+
+        if mode is OsuAuthenticationMode.AUTHORIZATION_CODE:
+            endpoint_2 = f'{OSU_URL}/oauth/authorize'
+            params = {
+                'client_id':        self.client_id,
+                'scope':            'public',
+                'response_type':    'code',
+                'redirect_uri':     'http://localhost:7270'
+            }
+            request = requests.Request('GET', url=endpoint_2, params=params)
+            url = request.prepare().url
+            webbrowser.open(url)
+            code = get_code()
+            payload = {
+                'client_id':        self.client_id,
+                'client_secret':    self.client_secret,
+                'grant_type':       'authorization_code',
+                'code':             code,
+                'redirect_uri':     'http://localhost:7270'
+            }
+
+        response = requests.post(endpoint, data=payload)
+        data = json.loads(response.text)
+        token_type = data['token_type']
+        access_token = data['access_token']
+
+        headers = {'Authorization': f'{token_type} {access_token}'}
+        return headers
+
+    async def ensure_rate_limit(self):
+        self.index = (self.index + 1) % (OSU_RATE_LIMIT - 1)
+        difference = time() - self.times[self.index]
+        if difference < 60:
+            await asyncio.sleep(60 - difference)
+        self.times[self.index] = time()
+
+    def get_current_rate(self):
+        previous_minute = np.where(time() - self.times <= 60)[0]
+        indices = (self.index - previous_minute) % (OSU_RATE_LIMIT - 1)
+        if len(indices) > 0:
+            return indices.max() + 1
+
+    async def request(self, endpoint, parameters={}, version=OsuAPIVersion.V2):
+        await self.ensure_rate_limit()
+
+        if version is OsuAPIVersion.V1:
+            url = f'{V1_URL}/{endpoint}'
+            parameters['k'] = self.key
+            async with self.session.get(url, params=parameters) as response:
+                data = json.loads(await response.text())
+
+        else:
+            url = f'{V2_URL}/{endpoint}'
+            try:
+                async with self.session.get(url, params=parameters, headers=self.headers) as response:
+                    data = json.loads(await response.text())
+            except json.JSONDecodeError:
+                return None
+
+        return data
+
+    async def download_replay(self, score_id):
+        await self.ensure_rate_limit()
+
+        replay_path = (Path('output') / str(score_id)).with_suffix('.osr')
+        endpoint = f'{V2_URL}/scores/osu/{score_id}/download'
+        async with self.session.get(endpoint, headers=self.headers) as response:
+            async with aiofiles.open(replay_path, 'wb') as replay:
+                await replay.write(await response.read())
+        return replay_path
 
 
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):
@@ -94,4 +178,31 @@ def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     create_db(db_path)
 
 
-osu_headers = get_osu_headers()
+def get_code():
+    code = None
+    running = True
+
+    class Server(BaseHTTPRequestHandler):
+        def do_GET(self):
+            nonlocal code, running
+
+            response = b'<body onload="window.close()" />'
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.send_header("Content-length", len(response))
+            self.end_headers()
+            self.wfile.write(response)
+
+            components = urlparse(self.path)
+            values = parse_qs(components.query)
+            code = values['code'][0]
+            running = False
+
+        def log_message(self, *args):
+            return
+
+    server = HTTPServer(('localhost', 7270), Server)
+    while running:
+        server.handle_request()
+
+    return code
