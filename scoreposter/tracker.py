@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 import utils
+from interactive import run_interactive_mode
 from post import Post, PostOptions
 from pytz import timezone
 from score import Score
@@ -117,6 +118,13 @@ class Tracker:
                 await asyncio.gather(*asyncio.all_tasks())
 
         asyncio.run(track_async(cls, user_ids))
+
+
+def loop_plays(user_id):
+    async with utils.OsuAPI(mode=utils.OsuAuthenticationMode.AUTHORIZATION_CODE) as osu_api:
+        player = Player(user_id, osu_api)
+        async for replay_path in player.iter_replays():
+            run_interactive_mode(replay_path)
 
 
 if __name__ == "__main__":
