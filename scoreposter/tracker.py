@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import asyncio
 from datetime import datetime, timedelta
 
@@ -128,6 +129,13 @@ def loop_plays(user_id):
 
 
 if __name__ == "__main__":
-    with open(utils.WHITELIST_PATH) as whitelist:
-        user_ids = [int(line) for line in whitelist.readlines()]
-    Tracker.track(user_ids)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--id', type=str)
+    args = parser.parse_args()
+
+    if args.id is not None:
+        asyncio.run(loop_plays(args.id))
+    else:
+        with open(utils.WHITELIST_PATH) as whitelist:
+            user_ids = [int(line) for line in whitelist.readlines()]
+        Tracker.track(user_ids)
