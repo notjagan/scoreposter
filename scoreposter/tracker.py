@@ -38,6 +38,24 @@ class Player:
             return None
         return data[0]
 
+    async def iter_replays(self):
+        latest_play = await self.get_latest_play()
+        last_yielded = latest_play
+        while True:
+            await asyncio.sleep(0.25)
+            try:
+                new_play = await self.get_latest_play()
+                if new_play is None or new_play == latest_play or \
+                   last_yielded is not None and self.last_yielded['id'] == new_play['id']:
+                    continue
+
+                latest_play = new_play
+                if latest_play['replay']:
+                    last_yielded = latest_play
+                    score_id = latest_play['best_id']
+                    replay_path = await self.osu_api.download_replay(score_id)
+                    yield replay_path
+
     async def loop(self):
         latest_play = await self.get_latest_play()
         last_posted = latest_play
