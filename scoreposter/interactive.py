@@ -47,7 +47,7 @@ score = asyncio.run(Score.create_score(replay_path))
 post = Post(score, options)
 print(title := post.title)
 
-actions = ['p', 'm', 'o', 'c', 'b', 'q']
+actions = ['p', 'm', 'o', 's', 'c', 'b', 'q']
 action_text = "/".join(actions)
 action = ''
 while action != 'q':
@@ -74,6 +74,14 @@ while action != 'q':
             options.show_combo = not options.show_combo
         if 'u' in to_toggle:
             options.show_ur = not options.show_ur
+        print(title := post.title)
+    elif action == 's':
+        try:
+            sliderbreaks = int(input("Sliderbreaks: "))
+        except ValueError:
+            continue
+        score.sliderbreaks = sliderbreaks
+        score.calculate_statistics()
         print(title := post.title)
     elif action == 'c':
         pyperclip.copy(title)
