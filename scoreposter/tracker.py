@@ -50,7 +50,7 @@ class Player:
                     continue
 
                 new_play = await self.get_latest_play()
-                if latest_play is None or new_play == latest_play or \
+                if new_play is None or new_play == latest_play or \
                    self.last_posted is not None and self.last_posted['id'] == new_play['id']:
                     continue
 
