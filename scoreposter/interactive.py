@@ -11,8 +11,8 @@ from post import Post, PostOptions
 from score import Score
 
 
-def run_interactive_mode(replay_path, options=PostOptions()):
-    score = asyncio.run(Score.create_score(replay_path))
+async def run_interactive_mode(replay_path, options):
+    score = await Score.create_score(replay_path)
     post = Post(score, options)
     print(title := post.title)
 
@@ -93,7 +93,7 @@ def main():
         replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
         replay_path = max(replays, key=lambda path: path.stat().st_mtime)
     
-    run_interactive_mode(replay_path, options)
+    asyncio.run(run_interactive_mode(replay_path, options))
 
 
 if __name__ == '__main__':

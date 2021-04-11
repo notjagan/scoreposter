@@ -131,7 +131,7 @@ async def loop_plays(user_id):
         player = Player(user_id, osu_api)
         async for replay_path in player.iter_replays():
             print("Replay found!")
-            run_interactive_mode(replay_path)
+            await run_interactive_mode(replay_path, PostOptions())
 
 
 if __name__ == "__main__":
