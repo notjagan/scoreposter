@@ -92,7 +92,7 @@ def main():
     if replay_path is None:
         replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
         replay_path = max(replays, key=lambda path: path.stat().st_mtime)
-    
+
     asyncio.run(run_interactive_mode(replay_path, options))
 
 

@@ -57,7 +57,7 @@ class Player:
                     score_id = latest_play['best_id']
                     replay_path = await self.osu_api.download_replay(score_id)
                     yield replay_path
-            
+
             except Exception:
                 import traceback
                 traceback.print_exc()
@@ -125,9 +125,11 @@ class Tracker:
         asyncio.run(track_async(cls, user_ids))
 
 
-async def loop_plays(user_id):
+async def loop_plays(user_id=None, username=None):
     async with utils.OsuAPI(mode=utils.OsuAuthenticationMode.AUTHORIZATION_CODE) as osu_api:
         print("Awaiting replays.")
+        if user_id is None:
+            user_id = await osu_api.username_to_id(username)
         player = Player(user_id, osu_api)
         async for replay_path in player.iter_replays():
             print("Replay found!")
@@ -136,11 +138,14 @@ async def loop_plays(user_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--id', type=str)
+    parser.add_argument('--id', type=int)
+    parser.add_argument('--username', type=str)
     args = parser.parse_args()
 
     if args.id is not None:
-        asyncio.run(loop_plays(args.id))
+        asyncio.run(loop_plays(user_id=args.id))
+    elif args.username is not None:
+        asyncio.run(loop_plays(username=args.username))
     else:
         with open(utils.WHITELIST_PATH) as whitelist:
             user_ids = [int(line) for line in whitelist.readlines()]

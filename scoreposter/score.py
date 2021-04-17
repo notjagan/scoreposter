@@ -124,13 +124,7 @@ class Score:
                 await image.write(await response.read())
 
     async def get_id(self):
-        parameters = {
-            'u':        self.player,
-            'type':     'string'
-        }
-
-        data = await self.osu_api.request('get_user', parameters, utils.OsuAPIVersion.V1)
-        self.user_id = int(data[0]['user_id'])
+        self.user_id = await self.osu_api.username_to_id(self.player)
 
     async def get_user(self):
         self.user = await self.osu_api.request(f'users/{self.user_id}/osu')

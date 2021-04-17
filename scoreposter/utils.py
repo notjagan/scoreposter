@@ -172,6 +172,15 @@ class OsuAPI:
                 await replay.write(await response.read())
         return replay_path
 
+    async def username_to_id(self, username):
+        parameters = {
+            'u':        username,
+            'type':     'string'
+        }
+
+        data = await self.request('get_user', parameters, OsuAPIVersion.V1)
+        return int(data[0]['user_id'])
+
 
 def refresh_db(db_path=OSU_PATH / 'osu!.db'):
     from osu_db_tools.osu_to_sqlite import create_db
