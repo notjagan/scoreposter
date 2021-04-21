@@ -272,6 +272,10 @@ def rounded_rectangle_mask(length, radius, tol=0.01):
 
 def download_image(url):
     response = requests.get(url, stream=True)
+    if url.endswith('.gif'):
+        import imageio
+        gif = imageio.mimread(bytes(response.raw.read()))
+        return cv2.cvtColor(gif[0], cv2.COLOR_RGBA2BGRA)
     array = np.asarray(bytearray(response.raw.read()), dtype="uint8")
     return cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
 
