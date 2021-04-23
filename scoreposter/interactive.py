@@ -34,7 +34,7 @@ async def run_interactive_mode(replay_path, options):
             options.message = message
             print(title := post.title)
         elif action == 'o':
-            to_toggle = input("Options (p/f/c/u): ")
+            to_toggle = input("Options (p/f/c/u/m): ")
             if 'p' in to_toggle:
                 options.show_pp = not options.show_pp
             if 'f' in to_toggle:
@@ -43,6 +43,8 @@ async def run_interactive_mode(replay_path, options):
                 options.show_combo = not options.show_combo
             if 'u' in to_toggle:
                 options.show_ur = not options.show_ur
+            if 'm' in to_toggle:
+                options.show_mapper = not options.show_mapper
             print(title := post.title)
         elif action == 's':
             try:

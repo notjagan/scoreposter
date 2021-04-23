@@ -67,7 +67,7 @@ class Score:
 
     def process_beatmap(self):
         cur = utils.osu_db.execute('SELECT beatmap_id, folder_name, map_file, artist, '
-                                   'title, difficulty FROM maps WHERE md5_hash=?',
+                                   'title, difficulty, mapper FROM maps WHERE md5_hash=?',
                                    (self.replay.beatmap_hash,))
         result = cur.fetchone()
         cur.close()
@@ -93,10 +93,11 @@ class Score:
             self.artist = beatmap.artist
             self.title = beatmap.title
             self.difficulty = beatmap.version
+            self.mapper = beatmap.creator
             return True
 
         self.beatmap_id, folder_name, map_file, self.artist, \
-            self.title, self.difficulty = result
+            self.title, self.difficulty, self.mapper = result
         map_folder = utils.BEATMAPS_DIR / folder_name
         self.map_path = map_folder / map_file
 
@@ -263,12 +264,17 @@ class Score:
             self.rank = Rank.D
 
     def construct_title(self, options):
+        if options.show_mapper:
+            parenthetical = f"{self.mapper}, {self.stars:.2f}*"
+        else:
+            parenthetical = f"{self.stars:.2f}*"
+
         if self.mods:
             modstring = ''.join(string for mod, string in utils.MODS.items()
                                 if mod in self.mods)
-            base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({self.stars:.2f}*)"
+            base = f"{self.artist} - {self.title} [{self.difficulty}] +{modstring} ({parenthetical})"
         else:
-            base = f"{self.artist} - {self.title} [{self.difficulty}] ({self.stars:.2f}*)"
+            base = f"{self.artist} - {self.title} [{self.difficulty}] ({parenthetical})"
 
         fc = self.misses == 0 and self.sliderbreaks == 0
 
