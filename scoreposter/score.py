@@ -287,7 +287,7 @@ class Score:
         else:
             base = f"{self.artist} - {self.title} [{self.difficulty}] ({parenthetical})"
 
-        fc = self.misses == 0 and self.sliderbreaks == 0
+        self.fc = self.misses == 0 and self.sliderbreaks == 0
 
         if self.accuracy == 100:
             base += " SS"
@@ -297,9 +297,9 @@ class Score:
                 base += f" {self.misses}xMiss"
             if self.sliderbreaks != 0 and options.show_sliderbreaks:
                 base += f" {self.sliderbreaks}xSB"
-            if options.show_combo or not fc:
+            if options.show_combo or options.show_combo is None and not self.fc:
                 base += f" {self.combo}/{self.max_combo}x"
-            if fc:
+            if self.fc:
                 base += " FC"
 
         if self.ranking is not None:
@@ -315,7 +315,7 @@ class Score:
                 pp_text += " if ranked"
             elif not self.submitted:
                 pp_text += " if submitted"
-            if options.show_fc_pp and not fc:
+            if options.show_fc_pp and not self.fc:
                 pp_text += f" ({self.fcpp:.0f}pp for FC)"
             segments.append(pp_text)
 

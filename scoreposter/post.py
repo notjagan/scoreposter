@@ -8,7 +8,7 @@ RESULTS_PATH = Path('output/results.png')
 
 class PostOptions:
 
-    def __init__(self, show_pp=True, show_fc_pp=True, show_combo=True,
+    def __init__(self, show_pp=True, show_fc_pp=True, show_combo=None,
                  show_ur=True, show_sliderbreaks=True, show_mapper=False,
                  message=None):
         self.show_pp = show_pp

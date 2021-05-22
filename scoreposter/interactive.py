@@ -40,7 +40,10 @@ async def run_interactive_mode(replay_path, options):
             if 'f' in to_toggle:
                 options.show_fc_pp = not options.show_fc_pp
             if 'c' in to_toggle:
-                options.show_combo = not options.show_combo
+                if options.show_combo is None:
+                    options.show_combo = score.fc
+                else:
+                    options.show_combo = not options.show_combo
             if 'u' in to_toggle:
                 options.show_ur = not options.show_ur
             if 'm' in to_toggle:
@@ -69,7 +72,7 @@ def main():
     parser.add_argument('-f', '--no-fc-pp', dest='show_fc_pp',
                         action='store_false')
     parser.add_argument('-c', '--no-combo', dest='show_combo',
-                        action='store_true')
+                        action='store_false', default=None)
     parser.add_argument('-u', '--no-ur', dest='show_ur',
                         action='store_false')
     parser.add_argument('-m', '--message', type=str)
