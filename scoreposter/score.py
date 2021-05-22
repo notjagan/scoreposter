@@ -48,11 +48,13 @@ class Score:
         status_task = asyncio.create_task(self.get_status())
         ranking_task = asyncio.create_task(self.get_ranking())
         bg_task = asyncio.create_task(self.get_background(needs_bg))
+        diff_task = asyncio.create_task(self.get_difficulty())
 
         await user_task
         await status_task
         await ranking_task
         await bg_task
+        await diff_task
 
         self.calculate_accuracy()
         self.calculate_sliderbreaks()
@@ -197,6 +199,16 @@ class Score:
         elif status == 'loved':
             self.loved = True
 
+    async def get_difficulty(self):
+        modnum = 0
+        for mod in self.mods:
+            if mod in [Mod.Easy, Mod.HalfTime, Mod.DoubleTime, Mod.Nightcore, Mod.HardRock]:
+                modnum |= mod
+
+        parameters = {'b': self.beatmap_id, 'mods': modnum}
+        data = await self.osu_api.request('get_beatmaps', parameters, utils.OsuAPIVersion.V1)
+        self.stars = float(data[0]['difficultyrating'])
+
     def calculate_statistics(self):
         ez = oppai.ezpp_new()
         oppai.ezpp_set_autocalc(ez, 1)
@@ -206,7 +218,6 @@ class Score:
         oppai.ezpp_data_dup(ez, data, len(data.encode('utf-8')))
         oppai.ezpp_set_mods(ez, reduce(lambda a, v: a | v.value, self.mods, 0))
 
-        self.stars = oppai.ezpp_stars(ez)
         self.max_combo = max(self.combo, oppai.ezpp_max_combo(ez))
 
         oppai.ezpp_set_combo(ez, self.combo)
