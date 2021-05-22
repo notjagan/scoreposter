@@ -202,8 +202,10 @@ class Score:
     async def get_difficulty(self):
         modnum = 0
         for mod in self.mods:
-            if mod in [Mod.Easy, Mod.HalfTime, Mod.DoubleTime, Mod.Nightcore, Mod.HardRock]:
+            if mod in [Mod.Easy, Mod.HalfTime, Mod.DoubleTime, Mod.HardRock]:
                 modnum |= mod
+            elif mod is Mod.Nightcore:
+                modnum |= Mod.DoubleTime
 
         parameters = {'b': self.beatmap_id, 'mods': modnum}
         data = await self.osu_api.request('get_beatmaps', parameters, utils.OsuAPIVersion.V1)
