@@ -171,15 +171,16 @@ class Score:
 
     async def find_submission(self):
         endpoint = f'users/{self.user_id}/scores/recent'
-        parameters = {'limit': 1}
+        parameters = {'limit': 10}
         data = await self.osu_api.request(endpoint, parameters)
-        if 'error' in data or len(data) != 1:
+        if 'error' in data or len(data) == 0:
             return
 
-        score = data[0]
-        if self.matches_score(score):
-            self.submission = score
-            print(color("Submission found!", fg='green'))
+        for score in data:
+            if self.matches_score(score):
+                self.submission = score
+                print(color("Submission found!", fg='green'))
+                return
 
     async def get_status(self):
         self.ranked = False
