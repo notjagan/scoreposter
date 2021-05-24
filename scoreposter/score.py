@@ -263,7 +263,7 @@ class Score:
                 self.rank = Rank.SS_PLUS
             else:
                 self.rank = Rank.SS
-        elif ratio > 0.9 and self.hits[2]/total_hits < 0.1 and self.misses == 0:
+        elif ratio > 0.9 and self.hits[2]/total_hits < 0.01 and self.misses == 0:
             if Mod.Hidden in self.mods:
                 self.rank = Rank.S_PLUS
             else:
