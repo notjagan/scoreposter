@@ -11,7 +11,7 @@ import requests
 from osrparse.enums import Mod
 from PIL import Image, ImageDraw, ImageFont
 from score import Rank, Score
-from utils import MODS
+from utils import MODS, OsuAPI
 
 ASSETS_PATH = Path('../assets')
 FONT_PATH = ASSETS_PATH / 'TruenoRg.otf'
@@ -510,12 +510,18 @@ def render_results(score, options, output_path=Path('output/results.png')):
     cv2.imwrite(str(output_path), flattened)
 
 
+async def create_score(replay_path):
+    async with OsuAPI() as osu_api:
+        score = await Score.from_replay(replay_path, osu_api)
+    return score
+
+
 if __name__ == "__main__":
     from sys import argv
 
     from post import PostOptions
 
     replay_path = argv[1]
-    score = asyncio.run(Score.create_score(replay_path))
+    score = asyncio.run(create_score(replay_path))
     options = PostOptions()
     render_results(score, options)
