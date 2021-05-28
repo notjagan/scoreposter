@@ -12,7 +12,8 @@ from score import Score
 
 
 async def run_interactive_mode(replay_path, options):
-    score = await Score.create_score(replay_path)
+    async with utils.OsuAPI() as osu_api:
+        score = await Score.from_replay(replay_path, osu_api)
     post = Post(score, options)
     print(title := post.title)
 

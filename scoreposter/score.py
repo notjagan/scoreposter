@@ -28,14 +28,21 @@ class Rank(Enum):
 
 class Score:
 
-    def __init__(self, replay_path, osu_api):
-        self.replay_path = replay_path
+    def __init__(self, osu_api):
         self.osu_api = osu_api
+
+    @classmethod
+    async def from_replay(cls, replay_path, osu_api):
+        score = cls(osu_api)
+        await score._from_replay(replay_path)
+        return score
+
+    async def _from_replay(self, replay_path):
+        self.replay_path = replay_path
         self.replay = parse_replay_file(replay_path)
         self.process_replay()
         self.get_mods()
 
-    async def _init(self):
         self.submission = None
         self.ranking = None
         self.cg_replay = None
@@ -335,10 +342,3 @@ class Score:
 
         title = ' | '.join(segments)
         return title
-
-    @classmethod
-    async def create_score(cls, replay_path):
-        async with utils.OsuAPI() as osu_api:
-            score = cls(replay_path, osu_api)
-            await score._init()
-        return score
