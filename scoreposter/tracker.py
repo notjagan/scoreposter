@@ -40,7 +40,7 @@ class Player:
             return None
         return data[0]
 
-    async def iter_replays(self):
+    async def iter_plays(self):
         latest_play = await self.get_latest_play()
         last_yielded = latest_play
         while True:
@@ -54,9 +54,7 @@ class Player:
                 latest_play = new_play
                 if latest_play['replay']:
                     last_yielded = latest_play
-                    score_id = latest_play['best_id']
-                    replay_path = await self.osu_api.download_replay(score_id)
-                    yield replay_path
+                    yield latest_play
 
             except Exception:
                 import traceback
@@ -81,10 +79,7 @@ class Player:
                 latest_play = new_play
                 if latest_play['pp'] is not None and latest_play['pp'] >= 700 and latest_play['replay']:
                     last_posted = latest_play
-                    score_id = latest_play['best_id']
-                    replay_path = await self.osu_api.download_replay(score_id)
-                    score = Score(replay_path, self.osu_api)
-                    await score._init()
+                    score = Score.from_submission(latest_play, self.osu_api)
                     options = PostOptions(show_combo=False)
                     post = Post(score, options)
                     post.submit()
@@ -131,9 +126,9 @@ async def loop_plays(user_id=None, username=None):
         if user_id is None:
             user_id = await osu_api.username_to_id(username)
         player = Player(user_id, osu_api)
-        async for replay_path in player.iter_replays():
+        async for submission in player.iter_plays():
             print("Replay found!")
-            await run_interactive_mode(replay_path, PostOptions())
+            await run_interactive_mode(PostOptions(), osu_api, submission=submission)
 
 
 if __name__ == "__main__":

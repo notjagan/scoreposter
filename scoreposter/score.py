@@ -16,14 +16,14 @@ from slider.replay import Replay
 
 
 class Rank(Enum):
-    SS_PLUS = auto()
-    SS = auto()
-    S_PLUS = auto()
-    S = auto()
-    A = auto()
-    B = auto()
-    C = auto()
-    D = auto()
+    SS_PLUS = 'XH'
+    SS = 'X'
+    S_PLUS = 'SH'
+    S = 'S'
+    A = 'A'
+    B = 'B'
+    C = 'C'
+    D = 'D'
 
 
 class Score:
@@ -37,14 +37,46 @@ class Score:
         await score._from_replay(replay_path)
         return score
 
+    @classmethod
+    async def from_submission(cls, submission, osu_api):
+        score = cls(osu_api)
+        await score._from_submission(submission)
+        return score
+
+    async def _from_submission(self, submission):
+        self.submission = submission
+        self.replay_path = await self.osu_api.download_replay(self.submission['best_id'])
+        self.replay = parse_replay_file(self.replay_path)
+        self.process_submission()
+        self.process_replay()
+        self.get_mods()
+        needs_bg = self.process_beatmap()
+
+        self.cg_replay = None
+
+        user_task = asyncio.create_task(self.get_user())
+        bg_task = asyncio.create_task(self.get_background(needs_bg))
+        status_task = asyncio.create_task(self.get_status())
+        ranking_task = asyncio.create_task(self.get_ranking())
+        diff_task = asyncio.create_task(self.get_difficulty())
+
+        await user_task
+        await bg_task
+        await status_task
+        await ranking_task
+        await diff_task
+
+        self.calculate_sliderbreaks()
+        self.calculate_statistics()
+        self.find_ur()
+
     async def _from_replay(self, replay_path):
         self.replay_path = replay_path
-        self.replay = parse_replay_file(replay_path)
+        self.replay = parse_replay_file(self.replay_path)
         self.process_replay()
         self.get_mods()
 
         self.submission = None
-        self.ranking = None
         self.cg_replay = None
 
         needs_bg = self.process_beatmap()
@@ -73,6 +105,15 @@ class Score:
         self.player = self.replay.player_name
         self.combo = self.replay.max_combo
         self.misses = self.replay.misses
+        self.hits = [self.replay.number_300s,
+                     self.replay.number_100s,
+                     self.replay.number_50s,
+                     self.replay.misses]
+
+    def process_submission(self):
+        self.user_id = self.submission['user_id']
+        self.rank = Rank(self.submission['rank'])
+        self.accuracy = self.submission['accuracy'] * 100
 
     def process_beatmap(self):
         cur = utils.osu_db.execute('SELECT beatmap_id, folder_name, map_file, artist, '
@@ -150,10 +191,6 @@ class Score:
 
     def calculate_accuracy(self):
         weights = [300/300, 100/300, 50/300, 0/300]
-        self.hits = [self.replay.number_300s,
-                     self.replay.number_100s,
-                     self.replay.number_50s,
-                     self.replay.misses]
         weighted_sum = sum(hit * weight for hit, weight in zip(self.hits, weights))
         self.accuracy = weighted_sum / sum(self.hits) * 100
 
@@ -251,6 +288,7 @@ class Score:
         self.ur = utils.cg.ur(self.cg_replay)
 
     async def get_ranking(self):
+        self.ranking = None
         if self.ranked or self.loved:
             data = await self.osu_api.request(f'beatmaps/{self.beatmap_id}/scores')
             if 'error' in data:

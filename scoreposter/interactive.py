@@ -11,9 +11,12 @@ from post import Post, PostOptions
 from score import Score
 
 
-async def run_interactive_mode(replay_path, options):
-    async with utils.OsuAPI() as osu_api:
+async def run_interactive_mode(options, osu_api, replay_path=None, submission=None):
+    if replay_path is not None:
         score = await Score.from_replay(replay_path, osu_api)
+    else:
+        score = await Score.from_submission(submission, osu_api)
+
     post = Post(score, options)
     print(title := post.title)
 
@@ -65,9 +68,10 @@ async def run_interactive_mode(replay_path, options):
             webbrowser.open(score.beatmap['url'])
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('replay', nargs='?', default=None)
+    parser.add_argument('-i', '--score-id', default=None, type=int)
     parser.add_argument('-p', '--no-pp', dest='show_pp',
                         action='store_false')
     parser.add_argument('-f', '--no-fc-pp', dest='show_fc_pp',
@@ -94,13 +98,19 @@ def main():
         message=args.message
     )
 
-    replay_path = args.replay
-    if replay_path is None:
-        replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
-        replay_path = max(replays, key=lambda path: path.stat().st_mtime)
+    if not args.score_id:
+        replay_path = args.replay
+        if replay_path is None:
+            replays = (utils.OSU_PATH / 'Replays').glob('*.osr')
+            replay_path = max(replays, key=lambda path: path.stat().st_mtime)
 
-    asyncio.run(run_interactive_mode(replay_path, options))
+        async with utils.OsuAPI() as osu_api:
+            await run_interactive_mode(options, osu_api, replay_path=replay_path)
+    else:
+        async with utils.OsuAPI(mode=utils.OsuAuthenticationMode.AUTHORIZATION_CODE) as osu_api:
+            submission = await osu_api.request(f'scores/osu/{args.score_id}')
+            await run_interactive_mode(options, osu_api, submission=submission)
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
