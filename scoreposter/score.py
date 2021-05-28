@@ -1,5 +1,5 @@
 import asyncio
-from enum import Enum, auto
+from enum import Enum
 from functools import reduce
 from pathlib import Path
 from re import search
