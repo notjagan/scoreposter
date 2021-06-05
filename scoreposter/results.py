@@ -283,8 +283,12 @@ def download_image(url):
 def render(func):
     def wrapper(score, position, layers, i=FG_LAYER):
         nonlocal func
-        renderables = func(score)
-        render_chain(renderables, position, layers, i)
+        try:
+            renderables = func(score)
+            render_chain(renderables, position, layers, i)
+        except Exception as e:
+            print(f"Error in rendering function {func.__name__}:")
+            print(e)
 
     return wrapper
 
