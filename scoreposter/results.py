@@ -525,7 +525,12 @@ if __name__ == "__main__":
 
     from post import PostOptions
 
-    replay_path = argv[1]
+    if len(argv) > 1:
+        replay_path = argv[1]
+    else:
+        from utils import OSU_PATH
+        replays = (OSU_PATH / 'Replays').glob('*.osr')
+        replay_path = max(replays, key=lambda path: path.stat().st_mtime)
     score = asyncio.run(create_score(replay_path))
     options = PostOptions()
     render_results(score, options)
