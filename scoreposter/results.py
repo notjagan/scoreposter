@@ -3,8 +3,10 @@
 import asyncio
 from copy import deepcopy
 from enum import Enum, auto
+from io import BytesIO
 from pathlib import Path
 
+import cairosvg
 import cv2
 import numpy as np
 import requests
@@ -270,16 +272,6 @@ def rounded_rectangle_mask(length, radius, tol=0.01):
     return mask
 
 
-def download_image(url):
-    response = requests.get(url, stream=True)
-    if url.endswith('.gif'):
-        import imageio
-        gif = imageio.mimread(bytes(response.raw.read()))
-        return cv2.cvtColor(gif[0], cv2.COLOR_RGBA2BGRA)
-    array = np.asarray(bytearray(response.raw.read()), dtype="uint8")
-    return cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
-
-
 def render(func):
     def wrapper(score, position, layers, i=FG_LAYER):
         nonlocal func
@@ -317,7 +309,15 @@ def render_stars(score):
 
 @render
 def render_pfp(score):
-    image = download_image(score.user['avatar_url'])
+    url = score.user['avatar_url']
+    response = requests.get(url, stream=True)
+    if url.endswith('.gif'):
+        import imageio
+        gif = imageio.mimread(bytes(response.raw.read()))
+        image = cv2.cvtColor(gif[0], cv2.COLOR_RGBA2BGRA)
+    else:
+        array = np.asarray(bytearray(response.raw.read()), dtype="uint8")
+        image = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
     if image.shape[2] == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
 
@@ -340,13 +340,26 @@ def render_combo(score):
     return (TextRenderable(f'{score.combo}×', COMBO_SIZE, DARK_GRAY),)
 
 
+def letter_to_regional_indicator(letter):
+    offset = ord('🇦') + ord(letter) - ord('A')
+    return hex(offset)[2:]
+
+
 @render
 def render_ranks(score):
     global_rank = score.user['statistics']['global_rank']
     country_rank = score.user['statistics']['rank']['country']
     country_code = score.user['country']['code']
-    image = download_image(f'http://osu.ppy.sh/images/flags/{country_code}.png')
-    flag = cv2.resize(image, (FLAG_WIDTH, FLAG_HEIGHT))
+    image_name = '-'.join(letter_to_regional_indicator(letter) for letter in country_code)
+    response = requests.get(f'http://osu.ppy.sh/assets/images/flags/{image_name}.svg', stream=True)
+    png = cairosvg.svg2png(bytestring=response.content, scale=16)
+    image = Image.open(BytesIO(png)).convert('RGBA')
+    array = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2BGRA)
+    where = np.array(np.where(array[..., 3]))
+    xmin, ymin = where.min(axis=1)
+    xmax, ymax = where.max(axis=1)
+    cropped = array[xmin:xmax, ymin:ymax]
+    flag = cv2.resize(cropped, (FLAG_WIDTH, FLAG_HEIGHT))
     return (
         TextRenderable(f'#{global_rank}  (#{country_rank}', RANKS_SIZE, GOLD),
         SpaceRenderable(RANKS_SPACE_1),
